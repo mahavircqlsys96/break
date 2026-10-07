@@ -1,0 +1,28 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --bg: 248 247 244;
+    --surface: 255 255 255;
+    --primary: 42 37 66;
+    --primary-hover: 30 27 46;
+    --accent: 108 91 190;
+    --accent-soft: 242 238 251;
+    --ink: 30 27 46;
+    --ink-muted: 122 118 134;
+    --line: 231 227 220;
+    --danger: 216 76 87;
+    --danger-soft: 253 236 234;
+    --success: 46 158 106;
+    --success-soft: 230 245 238;
+    --warning: 232 162 58;
+    --warning-soft: 253 244 231;
+  }
+  
+  html, body {
+    @apply bg-bg text-ink antialiased;
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+}
