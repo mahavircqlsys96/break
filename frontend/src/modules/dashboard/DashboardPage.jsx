@@ -170,13 +170,7 @@ export function DashboardPage() {
       colorClass: "text-amber-500",
       bgClass: "bg-amber-50",
     },
-    {
-      title: "PENDING WITHDRAWALS",
-      value: stats.pendingWithdrawals || "0",
-      icon: Wallet,
-      colorClass: "text-red-500",
-      bgClass: "bg-red-50",
-    },
+
     {
       title: "AVG BOOKING VALUE",
       value: `$${stats.averageBookingValue?.toFixed(2) || "0.00"}`,
