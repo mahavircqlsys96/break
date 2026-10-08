@@ -398,7 +398,7 @@ module.exports = {
 
             const { count, rows } = await followers.findAndCountAll({
                 where: { followingId: id },
-                include: [{ model: users, as: 'follower', attributes: ['id', 'name', 'email', 'profileImage', 'phone'] }],
+                include: [{ model: users, as: 'follower', attributes: ['id', 'name', 'email', 'image', 'phone'] }],
                 limit,
                 offset,
                 order: [['createdAt', 'DESC']],
@@ -426,7 +426,7 @@ module.exports = {
 
             const { count, rows } = await followers.findAndCountAll({
                 where: { followerId: id },
-                include: [{ model: users, as: 'following', attributes: ['id', 'name', 'email', 'profileImage', 'phone'] }],
+                include: [{ model: users, as: 'following', attributes: ['id', 'name', 'email', 'image', 'phone'] }],
                 limit,
                 offset,
                 order: [['createdAt', 'DESC']],

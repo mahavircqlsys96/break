@@ -71,7 +71,7 @@ module.exports = {
             const row = admin.toJSON ? admin.toJSON() : admin;
             const payload = {
                 ...row,
-                profile_picture: row.profileImage || row.profile_picture,
+                profile_picture: row.image || row.profile_picture,
             };
             return helper.success(res, "Admin profile retrieved successfully", payload);
         } catch (err) {

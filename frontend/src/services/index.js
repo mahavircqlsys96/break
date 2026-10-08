@@ -438,10 +438,10 @@ export const propertyService = {
             bedrooms: p.bedroom || 0,
             bathrooms: p.bathroom || 0,
             maxGuests: p.guest || 0,
-            amenityIds: p.propertiesKeyAmenities ? p.propertiesKeyAmenities.map(a => String(a.amenitiesId)) : [],
-            animalIds: p.propertiesAnimals ? p.propertiesAnimals.map(a => String(a.animalId)) : [],
+            amenityIds: p.propertiesKeyAmenities ? p.propertiesKeyAmenities.map(a => Number(a.amenitiesId)) : [],
+            animalIds: p.propertiesAnimals ? p.propertiesAnimals.map(a => Number(a.animalId)) : [],
             houseRules: p.houseRules || { checkIn: "15:00", checkOut: "11:00", smoking: false, parties: false, pets: false },
-            cancellationPolicyId: p.cancellationPolicyId || null,
+            cancellationPolicyId: p.cancellationPolicyId ? Number(p.cancellationPolicyId) : null,
             petsAllowed: p.propertiesAnimals ? p.propertiesAnimals.length > 0 : false,
             photos: p.propertiesPhotos?.map(img => {
               const url = img.image;
@@ -508,8 +508,8 @@ export const bookingService = {
             ...b,
             code: b.bookingNumber || b.id,
             guestName: b.user?.name || '—',
-            propertyName: b.property?.name || '—',
-            propertyPhoto: b.property?.photos?.[0] || '',
+            propertyName: b.property?.basicInfo || '—',
+            propertyPhoto: b.property?.propertiesPhotos?.[0]?.image ? (b.property.propertiesPhotos[0].image.startsWith('http') ? b.property.propertiesPhotos[0].image : import.meta.env.VITE_IMAGE_BASE + (b.property.propertiesPhotos[0].image.startsWith('/') ? b.property.propertiesPhotos[0].image.substring(1) : b.property.propertiesPhotos[0].image)) : 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?q=80&w=2070&auto=format&fit=crop',
             hostName: b.property?.host?.name || '—',
             total: b.total || b.amount || 0,
             status: b.status ? String(b.status).toLowerCase() : 'pending',
@@ -541,6 +541,11 @@ export const bookingService = {
           booking: {
             ...b,
             code: b.bookingNumber || b.id,
+            pets: b.bringPet === 'yes' ? 1 : 0,
+            nights: b.noOfDays || 1,
+            pricePerNight: b.property?.price || 0,
+            propertyName: b.property?.basicInfo || '—',
+            propertyPhoto: b.property?.propertiesPhotos?.[0]?.image ? (b.property.propertiesPhotos[0].image.startsWith('http') ? b.property.propertiesPhotos[0].image : import.meta.env.VITE_IMAGE_BASE + (b.property.propertiesPhotos[0].image.startsWith('/') ? b.property.propertiesPhotos[0].image.substring(1) : b.property.propertiesPhotos[0].image)) : 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?q=80&w=2070&auto=format&fit=crop',
             status: b.status ? String(b.status).toLowerCase() : 'pending',
             paymentStatus: b.paymentStatus ? b.paymentStatus.toLowerCase() : 'pending',
             transactionId: b.payment?.transactionId,
@@ -772,7 +777,11 @@ export const enquiryService = {
       if (res && res.success !== undefined) {
         const items = res.body?.list || [];
         return {
-          items,
+          items: items.map(e => ({
+            ...e,
+            status: e.status === 'Unread' ? 'new' : (e.status === 'Read' ? 'closed' : 'new'),
+            source: 'user_app' // fallback since there's no source in DB
+          })),
           total: res.body?.total || 0,
           page: res.body?.currentPage || 1,
           pageSize: q?.pageSize || 10,
@@ -781,11 +790,11 @@ export const enquiryService = {
       return res;
     }),
   reply: (id, reply) =>
-    api.put(`/admin/contactUs/${id}`, { reply, status: "replied" }, () =>
+    api.put(`/admin/contactUs/${id}`, { reply, status: "Read" }, () =>
       patchIn(db.enquiries, id, { reply, status: "replied" }),
     ),
   setStatus: (id, status) =>
-    api.put(`/admin/contactUs/${id}`, { status }, () =>
+    api.put(`/admin/contactUs/${id}`, { status: (status === 'closed' || status === 'replied') ? 'Read' : 'Unread' }, () =>
       patchIn(db.enquiries, id, { status }),
     ),
 };

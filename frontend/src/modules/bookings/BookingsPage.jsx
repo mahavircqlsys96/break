@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { CalendarX, PawPrint } from "lucide-react";
+import { CalendarX, PawPrint, ChevronRight } from "lucide-react";
 import {
   DataTable,
   EmptyState,
@@ -155,6 +155,15 @@ export function BookingsPage() {
               key: "status",
               header: "Status",
               render: (b) => <StatusBadge status={b.status} />,
+            },
+            {
+              key: "actions",
+              header: "",
+              render: (b) => (
+                <div className="flex justify-end">
+                  <ChevronRight className="size-4 text-ink-muted" />
+                </div>
+              ),
             },
           ]}
         />

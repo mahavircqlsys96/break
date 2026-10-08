@@ -14,18 +14,25 @@ module.exports = {
       let whereClause = {};
       if (search) {
         whereClause[Op.or] = [
-          { subject: { [Op.like]: `%${search}%` } },
+          { name: { [Op.like]: `%${search}%` } },
+          { email: { [Op.like]: `%${search}%` } },
           { message: { [Op.like]: `%${search}%` } },
         ];
       }
+      if (req.query.status) {
+        if (req.query.status === 'new') {
+          whereClause.status = 'Unread';
+        } else if (req.query.status === 'closed' || req.query.status === 'replied') {
+          whereClause.status = 'Read';
+        }
+      }
 
-      const { count, rows } = await db.contact_support
-        ? await db.contact_support.findAndCountAll({
+      const { count, rows } = await db.contactUs
+        ? await db.contactUs.findAndCountAll({
             where: whereClause,
             limit,
             offset,
             order: [['createdAt', 'DESC']],
-            include: [{ model: db.users, as: 'user', attributes: ['id', 'name', 'email'] }],
           })
         : { count: 0, rows: [] };
 
@@ -44,10 +51,9 @@ module.exports = {
   view_contactUs: async (req, res) => {
     try {
       const { id } = req.params;
-      if (!db.contact_support) return helper.success(res, 'Not found', {});
-      const item = await db.contact_support.findOne({
+      if (!db.contactUs) return helper.success(res, 'Not found', {});
+      const item = await db.contactUs.findOne({
         where: { id },
-        include: [{ model: db.users, as: 'user', attributes: ['id', 'name', 'email'] }],
       });
       if (!item) return helper.failed(res, 'Not found');
       return helper.success(res, 'Fetched', item);
@@ -60,8 +66,8 @@ module.exports = {
   update_contactUs: async (req, res) => {
     try {
       const { id } = req.params;
-      if (!db.contact_support) return helper.success(res, 'OK');
-      await db.contact_support.update(req.body, { where: { id } });
+      if (!db.contactUs) return helper.success(res, 'OK');
+      await db.contactUs.update(req.body, { where: { id } });
       return helper.success(res, 'Updated');
     } catch (error) {
       console.log(error);
@@ -72,8 +78,8 @@ module.exports = {
   delete_contactUs: async (req, res) => {
     try {
       const { id } = req.params;
-      if (!db.contact_support) return helper.success(res, 'OK');
-      await db.contact_support.destroy({ where: { id } });
+      if (!db.contactUs) return helper.success(res, 'OK');
+      await db.contactUs.destroy({ where: { id } });
       return helper.success(res, 'Deleted');
     } catch (error) {
       console.log(error);

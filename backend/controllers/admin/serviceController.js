@@ -25,7 +25,7 @@ module.exports = {
       const { count, rows } = await services.findAndCountAll({
         where: whereClause,
         include: [
-          { model: users, as: 'provider', attributes: ['id', 'name', 'email', 'profileImage'] },
+          { model: users, as: 'provider', attributes: ['id', 'name', 'email', 'image'] },
           { model: services_categories, as: 'category', attributes: ['id', 'categoryName'] }
         ],
         order: [['createdAt', 'DESC']],

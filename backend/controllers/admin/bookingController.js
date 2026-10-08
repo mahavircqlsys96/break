@@ -2,7 +2,7 @@ const db = require('../../models');
 const { Op } = require('sequelize');
 const helper = require('../../helpers/helper');
 const { Validator } = require('node-input-validator');
-const { users, services, bookings, payments, notifications, properties, bookingDates } = db;
+const { users, services, bookings, payments, notifications, properties, bookingDates, propertiesPhotos } = db;
 
 module.exports = {
 
@@ -50,7 +50,10 @@ module.exports = {
             model: properties, 
             as: 'property',
             where: Object.keys(propertyWhere).length ? propertyWhere : undefined,
-            include: [{ model: users, as: 'host', attributes: ['name'] }]
+            include: [
+              { model: users, as: 'host', attributes: ['name'] },
+              { model: propertiesPhotos, as: 'propertiesPhotos', attributes: ['image'] }
+            ]
           },
           { model: bookingDates, as: 'bookingDates' },
         ],
@@ -79,11 +82,14 @@ module.exports = {
       const booking = await bookings.findOne({
         where: { id },
         include: [
-          { model: users, as: 'user', attributes: ['id', 'name', 'email', 'phone', 'profileImage'] },
+          { model: users, as: 'user', attributes: ['id', 'name', 'email', 'phone', 'image'] },
           { 
             model: properties, 
             as: 'property',
-            include: [{ model: users, as: 'host' }]
+            include: [
+              { model: users, as: 'host' },
+              { model: propertiesPhotos, as: 'propertiesPhotos', attributes: ['image'] }
+            ]
           },
           { model: bookingDates, as: 'bookingDates' },
         ]
