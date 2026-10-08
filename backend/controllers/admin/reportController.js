@@ -1,7 +1,7 @@
 const db = require('../../models');
 const { Op } = require('sequelize');
 const helper = require('../../helpers/helper');
-const { users, reports } = db;
+const { users, reportUser } = db;
 
 module.exports = {
 
@@ -10,16 +10,19 @@ module.exports = {
       const page = parseInt(req.query.page) || 1;
       const limit = parseInt(req.query.limit) || 10;
       const offset = (page - 1) * limit;
-      const reportType = req.query.reportType;
       const status = req.query.status;
 
+      //  type: DataTypes.ENUM('Pending','Reviewed','Resolved','Rejected'),
+
       let whereClause = {};
-      if (reportType) whereClause.reportType = reportType;
       if (status) whereClause.status = status;
 
-      const { count, rows } = await reports.findAndCountAll({
+      const { count, rows } = await reportUser.findAndCountAll({
         where: whereClause,
-        include: [{ model: users, as: 'reporter', attributes: ['id', 'name', 'email'] }],
+        include: [
+          { model: users, as: 'reporter', attributes: ['id', 'name', 'email', 'role'] },
+          { model: users, as: 'reportedUser', attributes: ['id', 'name', 'email', 'role'] }
+        ],
         order: [['createdAt', 'DESC']],
         limit,
         offset,
@@ -43,7 +46,7 @@ module.exports = {
       const { id } = req.params;
       const { status, adminNote } = req.body;
 
-      const report = await reports.findOne({ where: { id } });
+      const report = await reportUser.findOne({ where: { id } });
       if (!report) return helper.failed(res, 'Report not found');
 
       await report.update({ status: status || 'resolved', adminRemarks: adminNote });

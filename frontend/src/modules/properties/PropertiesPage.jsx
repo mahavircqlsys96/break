@@ -57,26 +57,9 @@ export function PropertiesPage() {
       <PageHeader
         title="Properties"
         subtitle="Review, approve and manage every listing on Break."
-        actions={
-          <Button
-            icon={<Plus className="size-4" />}
-            onClick={() => navigate("/properties/new")}
-          >
-            Add property
-          </Button>
-        }
       />
 
-      <Tabs
-        className="mb-4"
-        value={list.filters.status ?? "all"}
-        onChange={(v) => list.setFilter("status", v)}
-        tabs={STATUS_TABS.map((t) =>
-          t.key === "pending"
-            ? { ...t, count: stats.data?.pendingProperties }
-            : t,
-        )}
-      />
+
 
       <div className="card overflow-hidden">
         <Toolbar
@@ -90,12 +73,7 @@ export function PropertiesPage() {
             onChange={(v) => list.setFilter("categoryId", v)}
             options={md.categories.map((c) => ({ value: c.id, label: c.name }))}
           />
-          <FilterSelect
-            allLabel="All cities"
-            value={list.filters.cityId}
-            onChange={(v) => list.setFilter("cityId", v)}
-            options={md.cities.map((c) => ({ value: c.id, label: c.name }))}
-          />
+
           <div className="ms-auto flex rounded-full bg-bg p-0.5">
             {["grid", "table"].map((v) => (
               <button

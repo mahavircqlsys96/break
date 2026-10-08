@@ -6,10 +6,10 @@ import {
 } from "date-fns";
 
 export const aed = (n) =>
-  `AED ${n.toLocaleString("en-AE", { maximumFractionDigits: 0 })}`;
+  `AED ${Number(n || 0).toLocaleString("en-AE", { maximumFractionDigits: 0 })}`;
 
 export const compact = (n) =>
-  n.toLocaleString("en", { notation: "compact", maximumFractionDigits: 1 });
+  Number(n || 0).toLocaleString("en", { notation: "compact", maximumFractionDigits: 1 });
 
 export const date = (iso) => (iso ? format(parseISO(iso), "d MMM yyyy") : "—");
 export const dateTime = (iso) =>
@@ -29,7 +29,7 @@ export const ago = (iso) => {
 };
 
 export const label = (s) =>
-  s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  s ? s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) : "";
 
 export const initials = (name) =>
   name

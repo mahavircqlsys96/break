@@ -63,45 +63,12 @@ export function GuestDetailPage() {
 
   return (
     <>
-      <PageHeader
-        back={<BackLink to="/guests">Guests</BackLink>}
-        title={g.name}
-        subtitle={`Guest since ${date(g.joinedAt)}`}
-        actions={
-          <>
-            {blocked ? (
-              <Button
-                variant="soft"
-                icon={<ShieldCheck className="size-4" />}
-                loading={status.isPending}
-                onClick={() => status.mutate("active")}
-              >
-                Unblock
-              </Button>
-            ) : (
-              <Button
-                variant="secondary"
-                icon={<Ban className="size-4" />}
-                onClick={() => setConfirm("block")}
-              >
-                Block
-              </Button>
-            )}
-            <Button
-              variant="danger-soft"
-              icon={<Trash2 className="size-4" />}
-              onClick={() => setConfirm("delete")}
-            >
-              Delete
-            </Button>
-          </>
-        }
-      />
+
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <Card>
           <div className="flex flex-col items-center pb-4 text-center">
-            <Avatar name={g.name} size={84} />
+            <Avatar name={g.name} src={g.image} size={84} />
             <p className="mt-3 text-lg font-bold">{g.name}</p>
             <p className="text-[13px] text-ink-muted">{g.email}</p>
             <div className="mt-3 flex gap-2">

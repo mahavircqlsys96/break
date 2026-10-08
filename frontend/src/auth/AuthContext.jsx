@@ -10,16 +10,20 @@ export function AuthProvider({ children }) {
   const [admin, setAdmin] = useState(null);
   const [ready, setReady] = useState(false);
 
+  const loadAdmin = () => {
+    return authService
+      .me()
+      .then(setAdmin)
+      .catch(() => authService.logout())
+      .finally(() => setReady(true));
+  };
+
   useEffect(() => {
     if (!tokenStore.get()) {
       setReady(true);
       return;
     }
-    authService
-      .me()
-      .then(setAdmin)
-      .catch(() => authService.logout())
-      .finally(() => setReady(true));
+    loadAdmin();
   }, []);
 
   const value = {
@@ -32,6 +36,7 @@ export function AuthProvider({ children }) {
       authService.logout();
       setAdmin(null);
     },
+    refresh: loadAdmin,
   };
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

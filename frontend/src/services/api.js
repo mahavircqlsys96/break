@@ -1,4 +1,4 @@
-const rawApiUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_ADMIN_API_BASE;
+const rawApiUrl = import.meta.env.VITE_ADMIN_API_BASE
 const API_URL = rawApiUrl?.replace(/\/admin\/?$/, "")?.replace(/\/$/, "");
 export const usingMock = !API_URL;
 const TOKEN_KEY = "break_admin_token";
@@ -47,13 +47,19 @@ function toQueryString(q) {
 
 async function http(method, path, body, query) {
   const token = tokenStore.get();
+  const isFormData = body instanceof FormData;
+  const headers = {
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+  
+  if (!isFormData) {
+    headers["Content-Type"] = "application/json";
+  }
+
   const res = await fetch(`${API_URL}${path}${toQueryString(query)}`, {
     method,
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    body: body === undefined ? undefined : JSON.stringify(body),
+    headers,
+    body: body === undefined ? undefined : (isFormData ? body : JSON.stringify(body)),
   });
   if (res.status === 401) tokenStore.clear();
   if (!res.ok) {

@@ -1,4 +1,4 @@
-import { forwardRef, useState } from "react";
+import { forwardRef, useState, useEffect } from "react";
 import { ImageOff, Loader2 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { initials, label } from "@/lib/format";
@@ -225,6 +225,10 @@ const STATUS_TONE = {
   closed: "neutral",
   dismissed: "neutral",
   inactive: "neutral",
+  Pending: "warning",
+  Reviewed: "accent",
+  Resolved: "success",
+  Rejected: "danger",
 };
 
 export function StatusBadge({ status }) {
@@ -241,8 +245,28 @@ const AVATAR_BG = [
   "bg-success-soft text-success",
   "bg-[#F3E8E2] text-[#9A5B3E]",
 ];
-export function Avatar({ name, size = 36, className }) {
-  const tone = AVATAR_BG[name.length % AVATAR_BG.length];
+export function Avatar({ name, src, size = 36, className }) {
+  const [failed, setFailed] = useState(!src);
+  
+  // Reset failed state if src changes
+  useEffect(() => {
+    setFailed(!src);
+  }, [src]);
+
+  const tone = AVATAR_BG[(name || "").length % AVATAR_BG.length];
+
+  if (src && !failed) {
+    return (
+      <img
+        src={src}
+        alt={name}
+        onError={() => setFailed(true)}
+        className={cn("shrink-0 rounded-full object-cover", className)}
+        style={{ width: size, height: size }}
+      />
+    );
+  }
+
   return (
     <span
       className={cn(
@@ -252,7 +276,7 @@ export function Avatar({ name, size = 36, className }) {
       )}
       style={{ width: size, height: size, fontSize: size * 0.36 }}
     >
-      {initials(name)}
+      {initials(name || "?")}
     </span>
   );
 }

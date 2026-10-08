@@ -1,5 +1,5 @@
 const Sequelize = require('sequelize');
-module.exports = function(sequelize, DataTypes) {
+module.exports = function (sequelize, DataTypes) {
   return sequelize.define('propertiesKeyAmenities', {
     id: {
       autoIncrement: true,
@@ -22,7 +22,13 @@ module.exports = function(sequelize, DataTypes) {
         model: 'amenities',
         key: 'id'
       }
+    },
+    status: {
+      type: DataTypes.ENUM('Active', 'Inactive'),
+      allowNull: false,
+      defaultValue: "Active"
     }
+
   }, {
     sequelize,
     tableName: 'propertiesKeyAmenities',

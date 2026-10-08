@@ -1,14 +1,20 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { CalendarX } from "lucide-react";
-import { DataTable, EmptyState, Photo, StatusBadge } from "@/components/ui";
+import { DataTable, EmptyState, Photo, StatusBadge, Pagination } from "@/components/ui";
 import { aed, dateRange } from "@/lib/format";
 
 /** Compact bookings table reused on guest, host and property detail pages. */
 export function BookingsTable({ rows, hide = [] }) {
   const navigate = useNavigate();
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
+  const displayRows = rows?.slice((page - 1) * pageSize, page * pageSize);
+
   return (
-    <DataTable
-      rows={rows}
+    <>
+      <DataTable
+        rows={displayRows}
       onRowClick={(b) => navigate(`/bookings/${b.id}`)}
       empty={
         <EmptyState
@@ -71,5 +77,14 @@ export function BookingsTable({ rows, hide = [] }) {
         },
       ]}
     />
+      {rows && rows.length > pageSize && (
+        <Pagination
+          page={page}
+          pageSize={pageSize}
+          total={rows.length}
+          onPage={setPage}
+        />
+      )}
+    </>
   );
 }

@@ -16,6 +16,10 @@ module.exports = function (sequelize, DataTypes) {
       type: DataTypes.STRING(10),
       allowNull: true
     },
+    password: {
+      type: DataTypes.STRING(255),
+      allowNull: true
+    },
     phone: {
       type: DataTypes.STRING(30),
       allowNull: true
@@ -76,7 +80,7 @@ module.exports = function (sequelize, DataTypes) {
       allowNull: true
     },
     status: {
-      type: DataTypes.ENUM('Active', 'Inactive'),
+      type: DataTypes.ENUM('Active', 'Inactive', 'Suspended', 'Pending'),
       allowNull: false,
       defaultValue: "Active"
     },

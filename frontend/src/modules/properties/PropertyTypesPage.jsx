@@ -8,15 +8,13 @@ const ENTITY = {
   fields: [
     ...nameFields,
     { key: "icon", label: "Icon", type: "icon" },
-    { key: "order", label: "Display order", type: "number" },
     { key: "active", label: "Active", type: "toggle" },
   ],
   columns: [
     ...nameCols(true),
-    { key: "order", header: "Order", render: (r) => String(r.order) },
     activeCol,
   ],
-  defaults: { name: "", icon: "Home", order: 5, active: true },
+  defaults: { name: "", icon: "Home", active: true },
 };
 
 export function PropertyTypesPage() {

@@ -14,9 +14,12 @@ module.exports = {
         const { email, password } = req.body;
         try {
             const admin = await users.findOne({ where: { email, role: 'Admin' } });
+
+
             if (!admin || !admin.password || !password) {
                 return helper.failed(res, "Incorrect email or password");
             }
+
             const isMatch = await bcrypt.compare(password, admin.password);
             if (!isMatch) {
                 return helper.failed(res, "Incorrect email or password");
@@ -50,7 +53,7 @@ module.exports = {
             const row = admin.toJSON ? admin.toJSON() : admin;
             const payload = {
                 ...row,
-                profile_picture: row.profileImage || row.profile_picture,
+                image: row.image,
             };
             return helper.success(res, "Admin profile retrieved successfully", payload);
         } catch (err) {
@@ -78,6 +81,8 @@ module.exports = {
     },
 
     updateProfile: async (req, res) => {
+
+
         const { id } = req.auth;
         const { name, email, country_code, phone, admin_commission, govt_tax, contact_email, contact_phone, withdrawal_fees, country_fees, promotional_fee_waivers, supported_currencies, tax_rules, payout_providers } = req.body;
         const imageFile = req.files ? req.files.profile_picture : undefined;
@@ -87,7 +92,7 @@ module.exports = {
                 return helper.failed(res, "Admin not found");
             }
 
-            const oldImageName = admin.profileImage;
+            const oldImageName = admin.image;
 
             const updatedData = {
                 ...(name !== undefined && { name }),
@@ -109,9 +114,9 @@ module.exports = {
             if (imageFile) {
                 const folderName = "users"
                 const fileUploader = await helper.fileUpload(imageFile, folderName);
-                updatedData.profileImage = fileUploader;
+                updatedData.image = fileUploader;
             } else {
-                updatedData.profileImage = admin.profileImage;
+                updatedData.image = admin.image;
             }
             await users.update(updatedData, { where: { id } });
 
@@ -119,7 +124,7 @@ module.exports = {
                 const oldImagePath = path.join(
                     __dirname,
                     "../../public",
-                    oldImageName
+                    oldImageName.startsWith('/') ? oldImageName.slice(1) : oldImageName
                 );
 
                 helper.deleteFileIfExists(oldImagePath);

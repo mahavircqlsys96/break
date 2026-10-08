@@ -1,17 +1,22 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { BadgeCheck, UserRound } from "lucide-react";
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
+import { BadgeCheck, UserRound, Eye, Trash2 } from "lucide-react";
 import {
   Avatar,
+  ConfirmDialog,
   DataTable,
   EmptyState,
   FilterSelect,
+  IconButton,
   PageHeader,
   Pagination,
   Stars,
   StatusBadge,
   Tabs,
+  Toggle,
   Toolbar,
+  useToast,
 } from "@/components/ui";
 import { hostService } from "@/services";
 import { useListQuery } from "@/lib/useListQuery";
@@ -26,39 +31,40 @@ export function HostsPage() {
     placeholderData: keepPreviousData,
   });
 
+  const qc = useQueryClient();
+  const toast = useToast();
+  const [deleting, setDeleting] = useState(null);
+
+  const toggleStatus = useMutation({
+    mutationFn: (r) => hostService.setStatus(r.id, r.status === "active" ? "inactive" : "active"),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["hosts"] });
+      toast("Status updated");
+    },
+  });
+
+  const remove = useMutation({
+    mutationFn: (id) => hostService.remove(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["hosts"] });
+      toast("Host deleted");
+      setDeleting(null);
+    },
+  });
+
   return (
     <>
       <PageHeader
         title="Hosts"
         subtitle="Property owners listing on Break. Verify new hosts before their listings go live."
       />
-      <Tabs
-        className="mb-4"
-        value={list.filters.status ?? "all"}
-        onChange={(v) => list.setFilter("status", v)}
-        tabs={[
-          { key: "all", label: "All" },
-          { key: "pending", label: "Pending verification" },
-          { key: "active", label: "Active" },
-          { key: "suspended", label: "Suspended" },
-        ]}
-      />
+
       <div className="card overflow-hidden">
         <Toolbar
           search={list.search}
           onSearch={list.setSearch}
           placeholder="Search name, email or phone"
-        >
-          <FilterSelect
-            allLabel="Verified & unverified"
-            value={list.filters.verified}
-            onChange={(v) => list.setFilter("verified", v)}
-            options={[
-              { value: "true", label: "Verified" },
-              { value: "false", label: "Unverified" },
-            ]}
-          />
-        </Toolbar>
+        />
         <DataTable
           rows={data?.items}
           loading={isFetching}
@@ -78,7 +84,7 @@ export function HostsPage() {
               sortable: true,
               render: (h) => (
                 <div className="flex items-center gap-3">
-                  <Avatar name={h.name} />
+                  <Avatar name={h.name} src={h.image} />
                   <div className="min-w-0">
                     <p className="flex items-center gap-1 font-semibold">
                       {h.name}
@@ -134,6 +140,33 @@ export function HostsPage() {
               header: "Status",
               render: (h) => <StatusBadge status={h.status} />,
             },
+            {
+              key: "actions",
+              header: "Action",
+              className: "w-36 text-end",
+              render: (r) => (
+                <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+                  <Toggle
+                    checked={r.status === "active"}
+                    onChange={() => toggleStatus.mutate(r)}
+                    label={`Toggle ${r.name}`}
+                  />
+                  <IconButton label="View" onClick={() => navigate(`/hosts/${r.id}`)}>
+                    <Eye className="size-4" />
+                  </IconButton>
+                  <IconButton
+                    label="Delete"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setDeleting(r);
+                    }}
+                    className="hover:bg-danger-soft hover:text-danger"
+                  >
+                    <Trash2 className="size-4" />
+                  </IconButton>
+                </div>
+              ),
+            },
           ]}
         />
 
@@ -146,6 +179,21 @@ export function HostsPage() {
           />
         )}
       </div>
+
+      <ConfirmDialog
+        open={!!deleting}
+        onClose={() => setDeleting(null)}
+        title="Delete host"
+        tone="danger"
+        message={
+          <>
+            Are you sure you want to delete <b>{deleting?.name}</b>?
+          </>
+        }
+        confirmLabel="Delete"
+        loading={remove.isPending}
+        onConfirm={() => deleting && remove.mutate(deleting.id)}
+      />
     </>
   );
 }

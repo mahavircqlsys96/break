@@ -1,16 +1,21 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { Users } from "lucide-react";
+import { Eye, Trash2, Users } from "lucide-react";
+import { useMutation, useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import {
   Avatar,
   Badge,
+  ConfirmDialog,
   DataTable,
   EmptyState,
   FilterSelect,
+  IconButton,
   PageHeader,
   Pagination,
   StatusBadge,
+  Toggle,
   Toolbar,
+  useToast,
 } from "@/components/ui";
 import { guestService } from "@/services";
 import { useListQuery } from "@/lib/useListQuery";
@@ -31,6 +36,27 @@ export function GuestsPage() {
     queryKey: ["guests", list.query],
     queryFn: () => guestService.list(list.query),
     placeholderData: keepPreviousData,
+  });
+
+  const qc = useQueryClient();
+  const toast = useToast();
+  const [deleting, setDeleting] = useState(null);
+
+  const toggleStatus = useMutation({
+    mutationFn: (r) => guestService.setStatus(r.id, r.status === "active" ? "inactive" : "active"),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["guests"] });
+      toast("Status updated");
+    },
+  });
+
+  const remove = useMutation({
+    mutationFn: (id) => guestService.remove(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["guests"] });
+      toast("User deleted");
+      setDeleting(null);
+    },
   });
 
   return (
@@ -90,7 +116,7 @@ export function GuestsPage() {
               sortable: true,
               render: (g) => (
                 <div className="flex items-center gap-3">
-                  <Avatar name={g.name} />
+                  <Avatar name={g.name} src={g.image} />
                   <div className="min-w-0">
                     <p className="font-semibold">{g.name}</p>
                     <p className="truncate text-xs text-ink-muted">{g.email}</p>
@@ -150,6 +176,33 @@ export function GuestsPage() {
               header: "Status",
               render: (g) => <StatusBadge status={g.status} />,
             },
+            {
+              key: "actions",
+              header: "",
+              className: "w-36 text-end",
+              render: (r) => (
+                <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+                  <Toggle
+                    checked={r.status === "active"}
+                    onChange={() => toggleStatus.mutate(r)}
+                    label={`Toggle ${r.name}`}
+                  />
+                  <IconButton label="View" onClick={() => navigate(`/guests/${r.id}`)}>
+                    <Eye className="size-4" />
+                  </IconButton>
+                  <IconButton
+                    label="Delete"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setDeleting(r);
+                    }}
+                    className="hover:bg-danger-soft hover:text-danger"
+                  >
+                    <Trash2 className="size-4" />
+                  </IconButton>
+                </div>
+              ),
+            },
           ]}
         />
 
@@ -162,6 +215,21 @@ export function GuestsPage() {
           />
         )}
       </div>
+
+      <ConfirmDialog
+        open={!!deleting}
+        onClose={() => setDeleting(null)}
+        title="Delete user"
+        tone="danger"
+        message={
+          <>
+            Are you sure you want to delete <b>{deleting?.name}</b>?
+          </>
+        }
+        confirmLabel="Delete"
+        loading={remove.isPending}
+        onConfirm={() => deleting && remove.mutate(deleting.id)}
+      />
     </>
   );
 }

@@ -25,7 +25,7 @@ export function ReportsList({ reports, actions }) {
           <div className="min-w-0 flex-1 text-[13px]">
             <div className="flex flex-wrap items-center gap-2">
               <b className="text-sm">{r.reason}</b>
-              <StatusBadge status={r.status} />
+              <StatusBadge status={r.status || 'Pending'} />
             </div>
             <p className="mt-1 text-ink-muted">
               <Link
@@ -34,33 +34,23 @@ export function ReportsList({ reports, actions }) {
               >
                 {r.reporterName}
               </Link>{" "}
-              ({r.reporterRole})
-              {r.type === "block"
-                ? " blocked "
-                : " reported a conversation with "}
+              ({r.reporterRole || 'user'}) reported{" "}
               <Link
-                to={profile(r.reportedRole, r.reportedId)}
+                to={profile(r.reportedRole, r.reportedUser?.id)}
                 className="font-semibold text-ink hover:text-primary"
               >
                 {r.reportedName}
               </Link>{" "}
-              ({r.reportedRole})
-              {r.propertyName && (
-                <>
-                  {" "}
-                  about{" "}
-                  <span className="font-semibold text-ink">
-                    {r.propertyName}
-                  </span>
-                </>
-              )}{" "}
+              ({r.reportedRole || 'user'})
               · {ago(r.createdAt)}
             </p>
-            {r.resolution && (
+            {r.adminRemarks && (
               <p className="mt-1.5 rounded-xl bg-bg px-3 py-2 text-ink-muted">
-                Resolution: {r.resolution}
+                <span className="font-semibold text-ink">Support replied:</span>{" "}
+                {r.adminRemarks}
               </p>
             )}
+
           </div>
           {actions?.(r)}
         </li>

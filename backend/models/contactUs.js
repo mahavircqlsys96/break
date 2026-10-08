@@ -1,5 +1,5 @@
 const Sequelize = require('sequelize');
-module.exports = function(sequelize, DataTypes) {
+module.exports = function (sequelize, DataTypes) {
   return sequelize.define('contactUs', {
     id: {
       autoIncrement: true,
@@ -20,7 +20,7 @@ module.exports = function(sequelize, DataTypes) {
       allowNull: false
     },
     status: {
-      type: DataTypes.ENUM('Unread','Read'),
+      type: DataTypes.ENUM('Unread', 'Read'),
       allowNull: false,
       defaultValue: "Unread"
     }

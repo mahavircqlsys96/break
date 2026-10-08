@@ -87,6 +87,10 @@ export const authService = {
       // Real backend might wrap it in `body` or `data` based on helper.success
       return r.body || r.data || r;
     }),
+  updateProfile: (input) =>
+    api.put("/admin/updateProfile", input, () => undefined),
+  updatePassword: (oldPassword, newPassword) =>
+    api.put("/admin/updatePassword", { oldPassword, newPassword }, () => undefined),
   logout: () => tokenStore.clear(),
 };
 
@@ -186,6 +190,7 @@ export const guestService = {
         return {
           items: items.map(u => ({
             ...u,
+            image: (u.image && (u.image.startsWith('http://') || u.image.startsWith('https://'))) ? u.image : (u.image ? import.meta.env.VITE_IMAGE_BASE + (u.image.startsWith('/') ? u.image.substring(1) : u.image) : null),
             joinedAt: u.createdAt,
             bookings: u.total_bookings || 0,
             dialCode: u.countryCode || '',
@@ -201,21 +206,64 @@ export const guestService = {
       return res;
     }),
   get: (id) =>
-    api.get(`/admin/guests/${id}`, () => ({
-      guest: findOr404(db.guests, id),
-      bookings: newest(db.bookings.filter((b) => b.guestId === id)).map(
-        bookingView,
-      ),
-      reports: db.reports
-        .filter((r) => r.reportedId === id || r.reporterId === id)
-        .map(reportView),
-    })),
+    Promise.all([
+      api.get(`/admin/viewUser/${id}/user`),
+      api.get(`/admin/bookings`, null, { userId: id, limit: 10 }),
+      api.get(`/admin/reports`, null, { userId: id, limit: 10 }),
+    ]).then(([resUser, resBookings, resReports]) => {
+      const u = resUser?.body || {};
+      const bookings = resBookings?.body?.list || [];
+      const reports = resReports?.body?.list || [];
+      return {
+        guest: {
+          ...u,
+          image: (u.image && (u.image.startsWith('http://') || u.image.startsWith('https://'))) ? u.image : (u.image ? import.meta.env.VITE_IMAGE_BASE + (u.image.startsWith('/') ? u.image.substring(1) : u.image) : null),
+          name: u.name || '—',
+          email: u.email || '—',
+          joinedAt: u.createdAt,
+          bookings: u.total_bookings || 0,
+          dialCode: u.countryCode || '',
+          phone: u.phone || '—',
+          signupMethod: u.socialType ? u.socialType.toLowerCase() : (u.phone ? 'phone' : 'email'),
+          status: u.status ? u.status.toLowerCase() : 'active',
+          totalSpent: u.total_spent || 0,
+          wishlists: 0,
+          language: 'en',
+          country: u.country || '—',
+          gender: u.gender || 'Unknown',
+          dob: u.dob || null,
+          lastActiveAt: u.updatedAt || u.createdAt,
+        },
+        bookings: bookings.map(b => ({
+          ...b,
+          code: b.bookingNumber || b.id,
+          guestName: b.user?.name || '—',
+          propertyName: b.property?.name || b.property?.title || '—',
+          propertyPhoto: b.property?.photos?.[0] || '',
+          hostName: b.property?.host?.name || '—',
+          total: b.total || b.amount || 0,
+          status: b.status ? String(b.status).toLowerCase() : 'pending',
+          paymentStatus: b.paymentStatus ? String(b.paymentStatus).toLowerCase() : 'pending',
+          checkIn: b.bookingDates?.[0]?.checkIn || b.bookingDates?.[0]?.date || new Date().toISOString(),
+          checkOut: b.bookingDates?.[0]?.checkOut || b.bookingDates?.[b.bookingDates?.length - 1]?.date || new Date().toISOString(),
+        })),
+        reports: reports.map(r => ({
+          ...r,
+          reporterName: r.reporter?.name || "—",
+          reporterRole: r.reporter?.role || "user",
+          reportedName: r.reportedUser?.name || "—",
+          reportedRole: r.reportedUser?.role || "user",
+          propertyName: "—",
+          status: r.status || 'Pending'
+        }))
+      };
+    }),
   setStatus: (id, status) =>
-    api.patch(`/admin/guests/${id}`, { status }, () =>
+    api.put(`/admin/toggleUserStatus/${id}`, { status }, () =>
       patchIn(db.guests, id, { status }),
     ),
   remove: (id) =>
-    api.del(`/admin/guests/${id}`, () => removeFrom(db.guests, id)),
+    api.del(`/admin/deleteUser/${id}`, () => removeFrom(db.guests, id)),
 };
 
 // ---------- hosts ----------
@@ -223,22 +271,28 @@ export const guestService = {
 export const hostService = {
   list: (q) =>
     api.get(
-      "/admin/userList",
+      "/admin/userList2",
       () =>
         paginate(db.hosts, q, {
           search: [(h) => h.name, (h) => h.email, (h) => h.phone],
         }),
       { ...q, role: "Host" },
     ).then((res) => {
+      console.log("DEBUG_HOST_SERVICE", res);
       if (res && res.success !== undefined) {
         const items = res.body?.user_list || [];
+        console.log("DEBUG_HOST_SERVICE_ITEMS", items.length, res.body);
         return {
           items: items.map(u => ({
             ...u,
+            image: (u.image && (u.image.startsWith('http://') || u.image.startsWith('https://'))) ? u.image : (u.image ? import.meta.env.VITE_IMAGE_BASE + (u.image.startsWith('/') ? u.image.substring(1) : u.image) : null),
             joinedAt: u.createdAt,
             dialCode: u.countryCode || '',
             status: u.status ? u.status.toLowerCase() : 'active',
             properties: u.total_properties || 0,
+            bookings: u.total_bookings || 0,
+            earnings: u.total_earnings || 0,
+            rating: u.rating || 0,
           })),
           total: res.body?.total || 0,
           page: res.body?.currentPage || 1,
@@ -248,24 +302,59 @@ export const hostService = {
       return res;
     }),
   get: (id) =>
-    api.get(`/admin/hosts/${id}`, () => ({
-      host: findOr404(db.hosts, id),
-      properties: db.properties
-        .filter((p) => p.hostId === id)
-        .map(propertyView),
-      bookings: newest(db.bookings.filter((b) => b.hostId === id))
-        .slice(0, 10)
-        .map(bookingView),
-      payouts: db.payouts.filter((p) => p.hostId === id),
-    })),
+    Promise.all([
+      api.get(`/admin/viewUser/${id}/host`),
+      api.get(`/admin/bookings`, null, { hostId: id, limit: 10 }),
+    ]).then(([resUser, resBookings]) => {
+      const u = resUser?.body || {};
+      const bookings = resBookings?.body?.list || [];
+      return {
+        host: {
+          ...u,
+          image: (u.image && (u.image.startsWith('http://') || u.image.startsWith('https://'))) ? u.image : (u.image ? import.meta.env.VITE_IMAGE_BASE + (u.image.startsWith('/') ? u.image.substring(1) : u.image) : null),
+          name: u.name || '—',
+          email: u.email || '—',
+          joinedAt: u.createdAt,
+          dialCode: u.countryCode || '',
+          phone: u.phone || '—',
+          status: u.status ? u.status.toLowerCase() : 'active',
+          properties: u.total_properties || 0,
+          country: u.country || '—',
+          gender: u.gender || 'Unknown',
+          responseRate: 100,
+          idDocument: 'Passport',
+          bookings: u.total_bookings || 0,
+          earnings: 0,
+          rating: 5.0,
+          verified: u.status === 'Active',
+        },
+        properties: [],
+        bookings: bookings.map(b => ({
+          ...b,
+          code: b.bookingNumber || b.id,
+          guestName: b.user?.name || '—',
+          propertyName: b.property?.name || b.property?.title || '—',
+          propertyPhoto: b.property?.photos?.[0] || '',
+          hostName: b.property?.host?.name || '—',
+          total: b.total || b.amount || 0,
+          status: b.status ? String(b.status).toLowerCase() : 'pending',
+          paymentStatus: b.paymentStatus ? String(b.paymentStatus).toLowerCase() : 'pending',
+          checkIn: b.bookingDates?.[0]?.checkIn || b.bookingDates?.[0]?.date || new Date().toISOString(),
+          checkOut: b.bookingDates?.[0]?.checkOut || b.bookingDates?.[b.bookingDates?.length - 1]?.date || new Date().toISOString(),
+        })),
+        payouts: [],
+      };
+    }),
   setStatus: (id, status) =>
-    api.patch(`/admin/hosts/${id}`, { status }, () =>
+    api.put(`/admin/toggleUserStatus/${id}`, { status }, () =>
       patchIn(
         db.hosts,
         id,
         status === "active" ? { status, verified: true } : { status },
       ),
     ),
+  remove: (id) =>
+    api.del(`/admin/deleteUser/${id}`, () => removeFrom(db.hosts, id)),
 };
 
 // ---------- properties ----------
@@ -335,7 +424,30 @@ export const bookingService = {
           filters: { month: (b, v) => b.checkIn.startsWith(v) },
         }),
       q,
-    ),
+    ).then((res) => {
+      if (res && res.success !== undefined) {
+        const items = res.body?.list || [];
+        return {
+          items: items.map(b => ({
+            ...b,
+            code: b.bookingNumber || b.id,
+            guestName: b.user?.name || '—',
+            propertyName: b.property?.name || '—',
+            propertyPhoto: b.property?.photos?.[0] || '',
+            hostName: b.property?.host?.name || '—',
+            total: b.total || b.amount || 0,
+            status: b.status ? String(b.status).toLowerCase() : 'pending',
+            paymentStatus: b.paymentStatus ? String(b.paymentStatus).toLowerCase() : 'pending',
+            checkIn: b.bookingDates?.[0]?.checkIn || b.bookingDates?.[0]?.date || new Date().toISOString(),
+            checkOut: b.bookingDates?.[0]?.checkOut || b.bookingDates?.[b.bookingDates?.length - 1]?.date || new Date().toISOString(),
+          })),
+          total: res.body?.total || 0,
+          page: res.body?.currentPage || 1,
+          pageSize: q?.pageSize || 10,
+        };
+      }
+      return res;
+    }),
   get: (id) =>
     api.get(`/admin/bookings/${id}`, () => {
       const booking = findOr404(db.bookings, id);
@@ -346,6 +458,27 @@ export const bookingService = {
         host: db.hosts.find((h) => h.id === booking.hostId),
         property: property && propertyView(property),
       };
+    }).then((res) => {
+      if (res && res.success !== undefined) {
+        const b = res.body || {};
+        return {
+          booking: {
+            ...b,
+            code: b.bookingNumber || b.id,
+            status: b.status ? String(b.status).toLowerCase() : 'pending',
+            paymentStatus: b.paymentStatus ? b.paymentStatus.toLowerCase() : 'pending',
+            transactionId: b.payment?.transactionId,
+            paidAt: b.payment?.createdAt,
+            cardLast4: b.payment?.cardLast4 || "0000",
+            checkIn: b.bookingDates?.[0]?.checkIn || b.bookingDates?.[0]?.date || new Date().toISOString(),
+            checkOut: b.bookingDates?.[0]?.checkOut || b.bookingDates?.[b.bookingDates?.length - 1]?.date || new Date().toISOString(),
+          },
+          guest: b.user,
+          host: b.property?.host,
+          property: b.property,
+        };
+      }
+      return res;
     }),
   setStatus: (id, status, reason) =>
     api.patch(`/admin/bookings/${id}`, { status, reason }, () =>
@@ -426,7 +559,7 @@ const mapToBackend = (path, input) => {
 
 function crud(path, list, prefix) {
   return {
-    all: () => api.get(`/admin/${path}`, () => list).then(res => {
+    all: () => api.get(`/admin/${path}?limit=1000`, () => list).then(res => {
       if (res && res.success !== undefined) {
         const arr = Array.isArray(res.body) ? res.body : (res.body?.list || res.body?.data || []);
         return arr.map(item => mapToFrontend(path, item));
@@ -443,7 +576,7 @@ function crud(path, list, prefix) {
         return res;
       }),
     update: (id, input) =>
-      api.patch(`/admin/${path}/${id}`, mapToBackend(path, input), () => patchIn(list, id, input))
+      api.put(`/admin/${path}/${id}`, mapToBackend(path, input), () => patchIn(list, id, input))
         .then(res => {
           if (res && res.success !== undefined) return mapToFrontend(path, res.body || res);
           return res;
@@ -524,9 +657,28 @@ export const supportService = {
           ],
         }),
       q,
-    ),
+    ).then(res => {
+      if (res && res.success !== undefined) {
+        const items = res.body?.list || [];
+        return {
+          items: items.map(r => ({
+            ...r,
+            status: r.status || 'Pending',
+            reporterName: r.reporter?.name || "—",
+            reporterRole: r.reporter?.role || "user",
+            reportedName: r.reportedUser?.name || "—",
+            reportedRole: r.reportedUser?.role || "user",
+            propertyName: "—" // no property relation directly on reportUser
+          })),
+          total: res.body?.total || 0,
+          page: res.body?.currentPage || 1,
+          pageSize: q?.pageSize || 10,
+        };
+      }
+      return res;
+    }),
   resolveReport: (id, status, resolution) =>
-    api.patch(`/admin/reports/${id}`, { status, resolution }, () =>
+    api.put(`/admin/reports/${id}`, { status, adminNote: resolution }, () =>
       patchIn(db.reports, id, { status, resolution }),
     ),
 };
@@ -534,19 +686,30 @@ export const supportService = {
 export const enquiryService = {
   list: (q) =>
     api.get(
-      "/admin/enquiries",
+      "/admin/contactUsList",
       () =>
         paginate(newest(db.enquiries), q, {
           search: [(e) => e.name, (e) => e.email, (e) => e.message],
         }),
       q,
-    ),
+    ).then(res => {
+      if (res && res.success !== undefined) {
+        const items = res.body?.list || [];
+        return {
+          items,
+          total: res.body?.total || 0,
+          page: res.body?.currentPage || 1,
+          pageSize: q?.pageSize || 10,
+        };
+      }
+      return res;
+    }),
   reply: (id, reply) =>
-    api.post(`/admin/enquiries/${id}/reply`, { reply }, () =>
+    api.put(`/admin/contactUs/${id}`, { reply, status: "replied" }, () =>
       patchIn(db.enquiries, id, { reply, status: "replied" }),
     ),
   setStatus: (id, status) =>
-    api.patch(`/admin/enquiries/${id}`, { status }, () =>
+    api.put(`/admin/contactUs/${id}`, { status }, () =>
       patchIn(db.enquiries, id, { status }),
     ),
 };
@@ -593,14 +756,45 @@ export const notificationService = {
 // ---------- content ----------
 
 export const cmsService = {
-  list: () => api.get("/admin/cms", () => db.cmsPages),
-  update: (id, input) =>
-    api.put(`/admin/cms/${id}`, input, () =>
+  list: () => api.get("/admin/cms", () => db.cmsPages).then(res => {
+    if (res && res.success !== undefined) {
+      return (res.body || res.data || []).map(p => ({
+        id: p.id,
+        slug: p.slug,
+        title: p.title,
+        titleAr: p.titleAr || p.title,
+        body: p.content,
+        bodyAr: p.contentAr || p.content,
+        updatedAt: p.updatedAt
+      }));
+    }
+    return res;
+  }),
+  get: (slug) => api.get(`/admin/getCms/${slug}`, () => db.cmsPages.find(p => p.slug === slug)).then(res => {
+    if (res && res.success !== undefined) {
+      const p = res.body || res.data;
+      if (!p) return null;
+      return {
+        id: p.id,
+        slug: p.slug,
+        title: p.title,
+        titleAr: p.titleAr || p.title,
+        body: p.content,
+        bodyAr: p.contentAr || p.content,
+        updatedAt: p.updatedAt
+      };
+    }
+    return res;
+  }),
+  update: (id, input) => {
+    const payload = { slug: input.slug, title: input.title, content: input.body };
+    return api.put(`/admin/updateCms`, payload, () =>
       patchIn(db.cmsPages, id, {
         ...input,
         updatedAt: new Date().toISOString(),
       }),
-    ),
+    );
+  }
 };
 
 // ---------- settings ----------

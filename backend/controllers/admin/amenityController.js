@@ -47,6 +47,8 @@ module.exports = {
       let icon = null;
       if (req.files && req.files.image) {
         icon = await helper.fileUpload(req.files.image, 'amenities');
+      } else if (req.body.icon) {
+        icon = req.body.icon;
       }
 
       const item = await amenities.create({
@@ -74,6 +76,8 @@ module.exports = {
       
       if (req.files && req.files.image) {
         updateData.icon = await helper.fileUpload(req.files.image, 'amenities');
+      } else if (req.body.icon !== undefined) {
+        updateData.icon = req.body.icon;
       }
 
       await item.update(updateData);

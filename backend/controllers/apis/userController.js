@@ -165,368 +165,207 @@ module.exports = {
     }
   },
 
-  filterPosts: async (req, res) => {
-    try {
-      const page = parseInt(req.query.page) || 1;
-      const limit = parseInt(req.query.limit) || 20;
-      const offset = (page - 1) * limit;
-
-      const category_id = req.query.category_id;
-      const distance = req.query.distance; // radius in km
-      const rating = req.query.rating;
-      const latitude = req.query.latitude;
-      const longitude = req.query.longitude;
-
-      let whereCondition = {
-        status: 'active',
-        type: 'publish',
-      };
-
-      if (req.auth) {
-        whereCondition.userId = { [Op.ne]: req.auth.id };
-      }
-
-      if (category_id) {
-        whereCondition.categoryId = category_id;
-      }
-
-      let distanceQuery = null;
-      let havingCondition = [];
-
-      if (latitude && longitude && distance) {
-        distanceQuery = `
-        (
-          6371 * acos(
-            cos(radians(${latitude}))
-            * cos(radians(posts.latitude))
-            * cos(radians(posts.longitude) - radians(${longitude}))
-            + sin(radians(${latitude}))
-            * sin(radians(posts.latitude))
-          )
-        )
-      `;
-        havingCondition.push(`distance <= ${distance}`);
-      }
-
-      if (rating) {
-        havingCondition.push(`\`user.providerAvgRating\` >= ${rating}`);
-      }
-
-      let findPosts = await posts.findAll({
-        where: whereCondition,
-        attributes: {
-          include: [
-            [
-              db.sequelize.literal(`(
-              SELECT COUNT(*)
-              FROM post_likes
-              WHERE post_likes.postId = posts.id
-            )`),
-              "likeCount",
-            ],
-            [
-              db.sequelize.literal(`(
-              SELECT COUNT(*)
-              FROM post_comments
-              WHERE post_comments.postId = posts.id
-            )`),
-              "commentCount",
-            ],
-            [
-              db.sequelize.literal(`(
-              SELECT COUNT(*)
-              FROM post_likes
-              WHERE post_likes.postId = posts.id
-              AND post_likes.userId = ${req.auth ? req.auth.id : 0}
-            )`),
-              "isLiked",
-            ],
-            [
-              db.sequelize.literal(`(
-              SELECT COUNT(*)
-              FROM bookmarks
-              WHERE bookmarks.postId = posts.id
-              AND bookmarks.userId = ${req.auth ? req.auth.id : 0}
-            )`),
-              "isBookmarked",
-            ],
-            ...(distanceQuery ? [
-              [db.sequelize.literal(distanceQuery), "distance"]
-            ] : []),
-          ]
-        },
-        include: [
-          {
-            model: users,
-            as: 'user',
-            where: { isProvider: 1 },
-            attributes: [
-              'id', 'name', 'profileImage',
-              [
-                db.sequelize.literal(`(
-                SELECT IFNULL(ROUND(AVG(rating),1),0)
-                FROM rating
-                WHERE rating.providerId = user.id
-              )`),
-                "providerAvgRating"
-              ],
-              [
-                db.sequelize.literal(`(
-              SELECT COUNT(*)
-              FROM rating
-              WHERE rating.providerId = user.id
-            )`),
-                "totalReview",
-              ],
-            ]
-          },
-          {
-            model: post_media,
-            as: "postMedia",
-            attributes: ["id", "mediaUrl", "type"],
-            required: false,
-          },
-          {
-            model: services_categories,
-            as: 'category',
-            attributes: ["id", "categoryName", "image"],
-            required: false,
-          }
-        ],
-        having: havingCondition.length > 0 ? db.sequelize.literal(havingCondition.join(' AND ')) : undefined,
-        order: distanceQuery
-          ? [[db.sequelize.literal("distance"), "ASC"]]
-          : [['createdAt', 'DESC']],
-        limit,
-        offset
-      });
-
-      return helper.success(res, 'Filtered posts fetched', {
-        posts: findPosts,
-        pagination: {
-          page,
-          limit,
-          hasNextPage: findPosts.length === limit
-        }
-      });
-
-    } catch (error) {
-      console.log(error);
-      return helper.error(res, 'Something went wrong');
-    }
-  },
-
-  followUser: async (req, res) => {
+  addWishlist: async (req, res) => {
     try {
       const v = new Validator(req.body, {
-        followingId: 'required'
+        wishlistName: "required|minLength:3|maxLength:255",
+        propertyId: "required|integer",
+        notes: "required|maxLength:500",
       });
 
       const errors = await helper.checkValidation(v);
-      if (errors) return helper.failed(res, errors);
 
-      const { followingId } = req.body;
-      const followerId = req.auth.id;
-
-      if (String(followerId) === String(followingId)) {
-        return helper.failed(res, 'You cannot follow yourself');
+      if (errors) {
+        return helper.failed(res, errors);
       }
 
-      const targetUser = await users.findOne({
-        where: { id: followingId }
-      });
+      const user = req.auth;
 
-      if (!targetUser) {
-        return helper.failed(res, 'User not found');
-      }
+      const { wishlistName, propertyId, notes } = req.body;
 
-      const existingFollow = await followers.findOne({
+      // Check property exists
+      const property = await properties.findOne({
         where: {
-          followerId,
-          followingId
-        }
+          id: propertyId,
+          deletedAt: null,
+        },
       });
 
-      // ==========================
-      // UNFOLLOW
-      // ==========================
-      if (existingFollow) {
-        await existingFollow.destroy();
-
-        return helper.success(res, 'Unfollowed successfully', {
-          isFollowing: false
-        });
+      if (!property) {
+        return helper.failed(res, "Property not found");
       }
 
-      // ==========================
-      // FOLLOW
-      // ==========================
-      await followers.create({
-        followerId,
-        followingId
+      // Check if property is already in wishlist
+      const alreadyWishlist = await wishlists.findOne({
+        where: {
+          userId: user.id,
+          propertyId: propertyId,
+        },
       });
 
-      await notifications.create({
-        userId: followingId,
-        senderId: followerId,
-        title: 'New Follower',
-        message: `${req.auth.name} started following you`,
-        type: 'follow'
+      if (alreadyWishlist) {
+        return helper.failed(res, "Property is already added to wishlist");
+      }
+
+      // Create wishlist
+      const wishlist = await wishlists.create({
+        userId: user.id,
+        propertyId: propertyId,
+        wishlistName: wishlistName,
+        notes: notes,
       });
 
-      return helper.success(res, 'Followed successfully', {
-        isFollowing: true
-      });
+      return helper.success(res, "Property added to wishlist successfully", wishlist);
 
     } catch (error) {
-      console.log(error);
-      return helper.error(res, 'Something went wrong');
+      console.log("addWishlist error:", error);
+      return helper.error(res, "Something went wrong");
     }
   },
-
-  getFollowers: async (req, res) => {
+  getWishlist: async (req, res) => {
     try {
-      const userId = req.query.userId || req.auth.id;
-      const page = parseInt(req.query.page) || 1;
-      const limit = parseInt(req.query.limit) || 20;
-      const offset = (page - 1) * limit;
+      const user = req.auth;
 
-      const { count, rows } = await followers.findAndCountAll({
-        where: { followingId: userId },
-        include: [
-          {
-            model: users,
-            as: 'follower',
-            attributes: [
-              'id',
-              'name',
-              'profileImage',
-              [
-                db.sequelize.literal(`(
-                SELECT COUNT(*)
-                FROM followers f
-                WHERE f.followerId = ${req.auth.id}
-                AND f.followingId = follower.id
-              )`),
-                'isFollow'
-              ]
-            ]
-          }
-        ],
-        limit,
-        offset
-      });
-
-      return helper.success(res, 'Followers fetched', {
-        total: count,
-        page,
-        limit,
-        data: rows
-      });
-
-    } catch (error) {
-      console.log(error);
-      return helper.error(res, 'Something went wrong');
-    }
-  },
-  getFollowing: async (req, res) => {
-    try {
-      const userId = req.query.userId || req.auth.id;
-      const page = parseInt(req.query.page) || 1;
-      const limit = parseInt(req.query.limit) || 20;
-      const offset = (page - 1) * limit;
-
-      const { count, rows } = await followers.findAndCountAll({
-        where: { followerId: userId },
-        include: [
-          {
-            model: users,
-            as: 'following',
-            attributes: [
-              'id',
-              'name',
-              'profileImage',
-              [
-                db.sequelize.literal(`(
-                SELECT COUNT(*)
-                FROM followers f
-                WHERE f.followerId = ${req.auth.id}
-                AND f.followingId = following.id
-              )`),
-                'isFollow'
-              ]
-            ]
-          }
-        ],
-        limit,
-        offset
-      });
-
-      return helper.success(res, 'Following fetched', {
-        total: count,
-        page,
-        limit,
-        data: rows
-      });
-
-    } catch (error) {
-      console.log(error);
-      return helper.error(res, 'Something went wrong');
-    }
-  },
-  walletDetails: async (req, res) => {
-    try {
-      const userId = req.auth.id;
-
+      // Pagination
       const page = parseInt(req.query.page) || 1;
       const limit = parseInt(req.query.limit) || 10;
       const offset = (page - 1) * limit;
 
-      const userWallet = await users.findOne({
-        where: { id: userId },
-        attributes: [
-          'id',
-          'walletAmount',
-          'totalEarning',
-          'pendingAmount',
-          'withdrawnAmount'
-        ]
-      });
-
-      if (!userWallet) {
-        return helper.failed(res, 'User not found');
-      }
-
-      const { count, rows } = await wallet_transactions.findAndCountAll({
-        where: { userId },
-        order: [['createdAt', 'DESC']],
-        limit,
-        offset
-      });
-
-      return helper.success(res, 'Wallet details fetched', {
-        wallet: {
-          id: userWallet.id,
-          walletAmount: userWallet.walletAmount,
-          totalEarning: userWallet.totalEarning,
-          pendingAmount: userWallet.pendingAmount,
-          withdrawnAmount: userWallet.withdrawnAmount
+      const { count, rows } = await wishlists.findAndCountAll({
+        where: {
+          userId: user.id,
         },
 
-        transactions: rows,
+        include: [
+          {
+            model: properties,
+            as: "property",
+            required: false,
 
-        pagination: {
-          total: count,
-          page,
-          limit,
-          totalPages: Math.ceil(count / limit),
-          hasNextPage: page < Math.ceil(count / limit)
-        }
+            attributes: {
+              include: [
+                [
+                  db.sequelize.literal(`(
+                  SELECT IFNULL(ROUND(AVG(rating), 1), 0)
+                  FROM reviews
+                  WHERE reviews.propertyId = properties.id
+                )`),
+                  "avgRating",
+                ],
+                [
+                  db.sequelize.literal(`(
+                  SELECT COUNT(*)
+                  FROM reviews
+                  WHERE reviews.propertyId = properties.id
+                )`),
+                  "ratingCount",
+                ],
+              ],
+            },
+
+            include: [
+              {
+                model: propertyTypes,
+                as: "propertyType",
+                attributes: [
+                  "id",
+                  "title",
+                  "icon",
+                  "status",
+                ],
+                required: false,
+              },
+
+              {
+                model: propertiesPhotos,
+                as: "propertiesPhotos",
+                attributes: [
+                  "id",
+                  "image",
+                ],
+                required: false,
+              },
+            ],
+          },
+        ],
+
+        order: [["createdAt", "DESC"]],
+
+        limit: limit,
+        offset: offset,
+        distinct: true,
       });
 
+      const totalPages = Math.ceil(count / limit);
+
+      const obj = {
+        wishlist: rows,
+        pagination: {
+          total: count,
+          page: page,
+          limit: limit,
+          totalPages: totalPages,
+          hasNextPage: page < totalPages,
+          hasPreviousPage: page > 1,
+        },
+      };
+
+      return helper.success(
+        res,
+        "Wishlist fetched successfully",
+        obj
+      );
+
     } catch (error) {
-      console.log(error);
-      return helper.error(res, 'Something went wrong');
+      console.log("getWishlist error:", error);
+      return helper.error(res, "Something went wrong");
+    }
+  },
+  removeWishlist: async (req, res) => {
+    try {
+      const user = req.auth;
+
+      const v = new Validator(req.body, {
+        wishlistId: "required|integer",
+      });
+
+      const errors = await helper.checkValidation(v);
+
+      if (errors) {
+        return helper.failed(res, errors);
+      }
+
+      const { wishlistId } = req.body;
+
+      // Check wishlist belongs to logged-in user
+      const wishlist = await wishlists.findOne({
+        where: {
+          id: wishlistId,
+          userId: user.id,
+        },
+      });
+
+      if (!wishlist) {
+        return helper.failed(res, "Wishlist not found");
+      }
+
+      // Remove from wishlist
+      await wishlists.destroy({
+        where: {
+          id: wishlistId,
+          userId: user.id,
+        },
+      });
+
+      return helper.success(
+        res,
+        "Property removed from wishlist successfully",
+        {}
+      );
+
+    } catch (error) {
+      console.log("removeWishlist error:", error);
+      return helper.error(res, "Something went wrong");
     }
   },
 

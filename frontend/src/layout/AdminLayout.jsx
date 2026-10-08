@@ -29,7 +29,7 @@ import {
   PawPrint
 } from "lucide-react";
 import { cn } from "@/lib/cn";
-// import { Logo } from "@/components/Logo"; // Replacing Logo with custom header as per image
+import { Logo } from "@/components/Logo";
 import { Avatar, IconButton } from "@/components/ui";
 import { useAuth } from "@/auth/AuthContext";
 
@@ -64,9 +64,17 @@ const NAV = [
   {
     group: "CONTENT & SUPPORT",
     items: [
-      { to: "/cms", label: "CMS", icon: FileText },
-      { to: "/contact-us", label: "Contact Us List", icon: Mail },
-      { to: "/reports", label: "Report User List", icon: Flag },
+      { to: "/reports", label: "Reports", icon: Flag },
+      { to: "/notifications", label: "Notifications", icon: Bell },
+      { to: "/contact-us", label: "Support", icon: Headphones },
+    ],
+  },
+  {
+    group: "CMS PAGES",
+    items: [
+      { to: "/cms/aboutUs", label: "About Us", icon: FileText },
+      { to: "/cms/privacy", label: "Privacy Policy", icon: ShieldCheck },
+      { to: "/cms/terms", label: "Terms & Conditions", icon: FileText },
     ],
   },
   {
@@ -80,14 +88,8 @@ const NAV = [
 function Sidebar({ onNavigate }) {
   return (
     <div className="flex h-full flex-col bg-[#11131c] text-white">
-      <div className="flex h-[72px] items-center px-6 gap-3 pt-4">
-        <div className="bg-white p-1 rounded-xl">
-          <Target className="size-6 text-[#ef4444]" />
-        </div>
-        <div>
-          <h1 className="text-white font-bold text-lg leading-tight">Muulahub</h1>
-          <p className="text-white/50 text-[11px]">Admin Panel</p>
-        </div>
+      <div className="flex h-[72px] items-center px-6 pt-4">
+        <Logo light={true} />
       </div>
       <nav className="flex-1 space-y-4 overflow-y-auto px-4 pb-6 pt-6 scrollbar-thin">
         {NAV.map((g) => (
@@ -137,7 +139,7 @@ function UserMenu() {
   const { admin, logout } = useAuth();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
-  
+
   return (
     <div className="relative">
       <button
@@ -145,13 +147,17 @@ function UserMenu() {
         className="flex items-center gap-3 rounded-full py-1 pe-2 ps-1 transition"
       >
         <span className="hidden text-end leading-tight sm:block">
-          <span className="block text-[14px] font-medium text-ink">gifty</span>
+          <span className="block text-[14px] font-medium text-ink">{admin?.name || "Admin"}</span>
         </span>
-        <img 
-          src="https://api.dicebear.com/7.x/avataaars/svg?seed=gifty&backgroundColor=e5e7eb" 
-          alt="gifty" 
-          className="size-8 rounded-full bg-gray-200" 
-        />
+        {admin?.image ? (
+          <img
+            src={import.meta.env.VITE_IMAGE_BASE + (admin.image.startsWith('/') ? admin.image.substring(1) : admin.image)}
+            alt={admin.name || "Admin"}
+            className="size-8 rounded-full bg-gray-200 object-cover"
+          />
+        ) : (
+          <Avatar name={admin?.name || "Admin"} size={32} />
+        )}
       </button>
       {open && (
         <>
@@ -202,21 +208,28 @@ export function AdminLayout() {
         </div>
       )}
 
-      <div className="lg:ps-[264px]">
-        <header className="sticky top-0 z-30 flex h-[72px] items-center gap-4 border-b border-gray-200 bg-white px-4 sm:px-6 lg:px-8 shadow-sm">
-          <button
-            aria-label="Open menu"
-            onClick={() => setMobileOpen(true)}
-            className="text-gray-500 hover:text-gray-700"
-          >
-            <Menu className="size-6" />
-          </button>
-          <h2 className="text-xl font-bold text-gray-800">Dashboard</h2>
-          
-          <div className="flex-1" />
-          <UserMenu />
-        </header>
-        <main className="mx-auto max-w-[1400px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+      <div className="lg:ps-[264px] flex flex-col min-h-screen">
+        <div className="p-4 sm:p-6 lg:p-8 pb-0">
+          <header className="flex h-[72px] items-center gap-4 rounded-2xl bg-white px-4 shadow-sm">
+            <button
+              aria-label="Open menu"
+              onClick={() => setMobileOpen(true)}
+              className="text-gray-500 hover:text-gray-700 bg-gray-100 p-2 rounded-lg"
+            >
+              <Menu className="size-5" />
+            </button>
+            <h2 className="text-xl font-bold text-gray-800">
+              {(() => {
+                const item = NAV.flatMap(g => g.items).find(i => i.to === location.pathname);
+                return item ? item.label : "Dashboard";
+              })()}
+            </h2>
+
+            <div className="flex-1" />
+            <UserMenu />
+          </header>
+        </div>
+        <main className="flex-1 p-4 sm:p-6 lg:p-8">
           <Outlet />
         </main>
       </div>

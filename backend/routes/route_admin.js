@@ -45,6 +45,7 @@ router.delete('/deleteUser/:id', userController.deleteUser);
 router.put('/restoreUser/:id', userController.restoreUser);
 
 // CMS
+router.get('/cms', cmsController.listCms);
 router.get('/getCms/:slug', cmsController.getCms);
 router.put('/updateCms', cmsController.updateCms);
 

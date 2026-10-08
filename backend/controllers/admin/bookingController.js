@@ -2,7 +2,7 @@ const db = require('../../models');
 const { Op } = require('sequelize');
 const helper = require('../../helpers/helper');
 const { Validator } = require('node-input-validator');
-const { users, services, bookings, payments, notifications } = db;
+const { users, services, bookings, payments, notifications, properties, bookingDates } = db;
 
 module.exports = {
 
@@ -15,28 +15,44 @@ module.exports = {
       const status = req.query.status;
       const paymentStatus = req.query.paymentStatus;
       const userId = req.query.userId;
+      const hostId = req.query.hostId;
 
       const andParts = [];
       if (userId) {
         const uid = parseInt(userId, 10);
         if (!Number.isNaN(uid)) {
-          andParts.push({
-            [Op.or]: [{ userId: uid }, { providerId: uid }],
-          });
+          andParts.push({ userId: uid });
         }
       }
-      if (status) andParts.push({ bookingStatus: status });
-      if (paymentStatus) andParts.push({ paymentStatus: paymentStatus });
-      if (search) andParts.push({ bookingNumber: { [Op.like]: `%${search}%` } });
+      if (status) andParts.push({ status: status });
+      if (search) {
+        const sid = parseInt(search, 10);
+        if (!Number.isNaN(sid)) {
+          andParts.push({ id: sid });
+        }
+      }
 
       const whereClause = andParts.length ? { [Op.and]: andParts } : {};
+      
+      let propertyWhere = {};
+      if (hostId) {
+        const hid = parseInt(hostId, 10);
+        if (!Number.isNaN(hid)) {
+          propertyWhere = { hostId: hid };
+        }
+      }
 
       const { count, rows } = await bookings.findAndCountAll({
         where: whereClause,
         include: [
           { model: users, as: 'user', attributes: ['id', 'name', 'email', 'phone'] },
-          { model: users, as: 'provider', attributes: ['id', 'name', 'email'] },
-          { model: services, as: 'service', attributes: ['id', 'title', 'price'] }
+          { 
+            model: properties, 
+            as: 'property',
+            where: Object.keys(propertyWhere).length ? propertyWhere : undefined,
+            include: [{ model: users, as: 'host', attributes: ['name'] }]
+          },
+          { model: bookingDates, as: 'bookingDates' },
         ],
         order: [['createdAt', 'DESC']],
         limit,
@@ -64,16 +80,18 @@ module.exports = {
         where: { id },
         include: [
           { model: users, as: 'user', attributes: ['id', 'name', 'email', 'phone', 'profileImage'] },
-          { model: users, as: 'provider', attributes: ['id', 'name', 'email', 'phone', 'profileImage'] },
-          { model: services, as: 'service', attributes: ['id', 'title', 'price', 'serviceImage', 'description'] }
+          { 
+            model: properties, 
+            as: 'property',
+            include: [{ model: users, as: 'host' }]
+          },
+          { model: bookingDates, as: 'bookingDates' },
         ]
       });
 
       if (!booking) return helper.failed(res, 'Booking not found');
 
-      const payment = await payments.findOne({ where: { bookingId: id } });
-
-      return helper.success(res, 'Booking detail fetched', { ...booking.toJSON(), payment });
+      return helper.success(res, 'Booking detail fetched', { ...booking.toJSON(), payment: null });
     } catch (error) {
       console.log(error);
       return helper.error(res, 'Something went wrong');
@@ -92,7 +110,7 @@ module.exports = {
       const booking = await bookings.findOne({ where: { id } });
       if (!booking) return helper.failed(res, 'Booking not found');
 
-      await booking.update({ bookingStatus: req.body.status });
+      await booking.update({ status: req.body.status });
 
       return helper.success(res, 'Booking status updated');
     } catch (error) {

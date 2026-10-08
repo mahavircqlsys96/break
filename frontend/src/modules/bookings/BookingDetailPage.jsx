@@ -200,7 +200,7 @@ export function BookingDetailPage() {
                 to={`/guests/${guest.id}`}
                 className="flex items-center gap-3 rounded-2xl p-1 transition hover:bg-accent-soft/50"
               >
-                <Avatar name={guest.name} size={44} />
+                <Avatar name={guest.name} src={guest.image} size={44} />
                 <div className="min-w-0">
                   <p className="font-semibold">{guest.name}</p>
                   <p className="truncate text-xs text-ink-muted">
@@ -216,7 +216,7 @@ export function BookingDetailPage() {
                 to={`/hosts/${host.id}`}
                 className="flex items-center gap-3 rounded-2xl p-1 transition hover:bg-accent-soft/50"
               >
-                <Avatar name={host.name} size={44} />
+                <Avatar name={host.name} src={host.image} size={44} />
                 <div className="min-w-0">
                   <p className="font-semibold">{host.name}</p>
                   <p className="truncate text-xs text-ink-muted">

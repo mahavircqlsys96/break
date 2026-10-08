@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, Trash2, UserX } from "lucide-react";
+import { Plus, Trash2, UserX, Eye, EyeOff } from "lucide-react";
 import {
   Avatar,
   Badge,
@@ -14,13 +14,14 @@ import {
   Input,
   Modal,
   PageHeader,
+  Pagination,
   Select,
   StatusBadge,
   Tabs,
   Toggle,
   useToast,
 } from "@/components/ui";
-import { settingsService } from "@/services";
+import { authService, settingsService } from "@/services";
 import { useAuth } from "@/auth/AuthContext";
 import { ago, date, label } from "@/lib/format";
 
@@ -44,28 +45,13 @@ const ROLES = [
 ];
 
 export function SettingsPage() {
-  const [tab, setTab] = useState("app");
   return (
     <>
       <PageHeader
         title="Settings"
         subtitle="Platform configuration, admin team and account requests."
       />
-      <Tabs
-        className="mb-4"
-        value={tab}
-        onChange={setTab}
-        tabs={[
-          { key: "app", label: "App settings" },
-          { key: "admins", label: "Admins & roles" },
-          { key: "deletion", label: "Account deletion" },
-          { key: "profile", label: "My profile" },
-        ]}
-      />
-      {tab === "app" && <AppSettingsTab />}
-      {tab === "admins" && <AdminsTab />}
-      {tab === "deletion" && <DeletionTab />}
-      {tab === "profile" && <ProfileTab />}
+      <ProfileTab />
     </>
   );
 }
@@ -196,6 +182,10 @@ function AdminsTab() {
   const [invite, setInvite] = useState(false);
   const [form, setForm] = useState({ name: "", email: "", role: "operations" });
   const [removing, setRemoving] = useState(null);
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
+  const displayData = data?.slice((page - 1) * pageSize, page * pageSize);
+
   const done = (msg) => {
     qc.invalidateQueries({ queryKey: ["admins"] });
     toast(msg);
@@ -235,7 +225,7 @@ function AdminsTab() {
         </Button>
       </div>
       <DataTable
-        rows={data}
+        rows={displayData}
         loading={isLoading}
         columns={[
           {
@@ -320,6 +310,14 @@ function AdminsTab() {
           },
         ]}
       />
+      {data && data.length > pageSize && (
+        <Pagination
+          page={page}
+          pageSize={pageSize}
+          total={data.length}
+          onPage={setPage}
+        />
+      )}
 
       <Modal
         open={invite}
@@ -393,6 +391,10 @@ function DeletionTab() {
     queryKey: ["deletion-requests"],
     queryFn: settingsService.deletionRequests,
   });
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
+  const displayData = data?.slice((page - 1) * pageSize, page * pageSize);
+
   const resolve = useMutation({
     mutationFn: ({ id, status }) => settingsService.resolveDeletion(id, status),
     onSuccess: (d) => {
@@ -411,7 +413,7 @@ function DeletionTab() {
         anonymised within 30 days.
       </p>
       <DataTable
-        rows={data}
+        rows={displayData}
         loading={isLoading}
         empty={
           <EmptyState icon={<UserX className="size-8" />} title="No requests" />
@@ -484,47 +486,142 @@ function DeletionTab() {
           },
         ]}
       />
+      {data && data.length > pageSize && (
+        <Pagination
+          page={page}
+          pageSize={pageSize}
+          total={data.length}
+          onPage={setPage}
+        />
+      )}
     </div>
   );
 }
 
 function ProfileTab() {
-  const { admin } = useAuth();
+  const { admin, login, refresh } = useAuth(); // assume we could refresh, but usually admin context holds data.
   const toast = useToast();
+  const [profile, setProfile] = useState({ name: admin?.name || "", email: admin?.email || "" });
+  const [file, setFile] = useState(null);
   const [pw, setPw] = useState({ current: "", next: "", confirm: "" });
+  const [showPw, setShowPw] = useState({ current: false, next: false, confirm: false });
   if (!admin) return null;
   const valid = pw.current && pw.next.length >= 8 && pw.next === pw.confirm;
+
+  // Calculate display avatar
+  let avatarSrc = null;
+  if (file) {
+    avatarSrc = URL.createObjectURL(file);
+  } else if (admin.image) {
+    const rawPic = admin.image;
+    avatarSrc = import.meta.env.VITE_IMAGE_BASE + (rawPic.startsWith('/') ? rawPic.substring(1) : rawPic);
+  }
+
   return (
     <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
       <Card title="Profile">
-        <div className="flex items-center gap-4">
-          <Avatar name={admin.name} size={64} />
+        <div className="flex items-center gap-4 mb-4">
+          <div className="relative group cursor-pointer" onClick={() => document.getElementById('profilePicInput').click()}>
+            {avatarSrc ? (
+              <img src={avatarSrc} alt={admin.name} className="size-16 rounded-full object-cover bg-gray-200" />
+            ) : (
+              <Avatar name={admin.name} size={64} />
+            )}
+            <div className="absolute inset-0 bg-black/40 rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+              <span className="text-white text-xs font-semibold">Change</span>
+            </div>
+            <input
+              type="file"
+              id="profilePicInput"
+              className="hidden"
+              accept="image/*"
+              onChange={(e) => {
+                if (e.target.files?.[0]) setFile(e.target.files[0]);
+              }}
+            />
+          </div>
           <div>
-            <p className="text-lg font-bold">{admin.name}</p>
-            <p className="text-[13px] text-ink-muted">{admin.email}</p>
             <Badge tone="accent" className="mt-1.5">
               {label(admin.role)}
             </Badge>
+            <p className="text-xs text-gray-500 mt-1 cursor-pointer hover:underline" onClick={() => document.getElementById('profilePicInput').click()}>
+              Click to change photo
+            </p>
+          </div>
+        </div>
+        <div className="space-y-4">
+          <Field label="Name">
+            <Input
+              value={profile.name}
+              onChange={(e) => setProfile({ ...profile, name: e.target.value })}
+            />
+          </Field>
+          <Field label="Email">
+            <Input
+              value={profile.email}
+              onChange={(e) => setProfile({ ...profile, email: e.target.value })}
+            />
+          </Field>
+          <div className="flex justify-end">
+            <Button
+              onClick={async () => {
+                try {
+                  const fd = new FormData();
+                  fd.append("name", profile.name);
+                  fd.append("email", profile.email);
+                  if (file) {
+                    fd.append("profile_picture", file);
+                  }
+                  await authService.updateProfile(fd);
+                  await refresh();
+                  toast("Profile updated successfully!");
+                } catch (e) {
+                  toast("Failed to update profile");
+                }
+              }}
+            >
+              Update profile
+            </Button>
           </div>
         </div>
       </Card>
       <Card title="Change password">
         <div className="space-y-4">
           <Field label="Current password">
-            <Input
-              type="password"
-              autoComplete="current-password"
-              value={pw.current}
-              onChange={(e) => setPw({ ...pw, current: e.target.value })}
-            />
+            <div className="relative">
+              <Input
+                type={showPw.current ? "text" : "password"}
+                autoComplete="current-password"
+                value={pw.current}
+                onChange={(e) => setPw({ ...pw, current: e.target.value })}
+                className="pe-10"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPw({ ...showPw, current: !showPw.current })}
+                className="absolute inset-y-0 end-0 flex items-center pe-3 text-gray-400 hover:text-gray-600"
+              >
+                {showPw.current ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+              </button>
+            </div>
           </Field>
           <Field label="New password" hint="At least 8 characters">
-            <Input
-              type="password"
-              autoComplete="new-password"
-              value={pw.next}
-              onChange={(e) => setPw({ ...pw, next: e.target.value })}
-            />
+            <div className="relative">
+              <Input
+                type={showPw.next ? "text" : "password"}
+                autoComplete="new-password"
+                value={pw.next}
+                onChange={(e) => setPw({ ...pw, next: e.target.value })}
+                className="pe-10"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPw({ ...showPw, next: !showPw.next })}
+                className="absolute inset-y-0 end-0 flex items-center pe-3 text-gray-400 hover:text-gray-600"
+              >
+                {showPw.next ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+              </button>
+            </div>
           </Field>
           <Field
             label="Confirm new password"
@@ -534,19 +631,34 @@ function ProfileTab() {
                 : undefined
             }
           >
-            <Input
-              type="password"
-              autoComplete="new-password"
-              value={pw.confirm}
-              onChange={(e) => setPw({ ...pw, confirm: e.target.value })}
-            />
+            <div className="relative">
+              <Input
+                type={showPw.confirm ? "text" : "password"}
+                autoComplete="new-password"
+                value={pw.confirm}
+                onChange={(e) => setPw({ ...pw, confirm: e.target.value })}
+                className="pe-10"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPw({ ...showPw, confirm: !showPw.confirm })}
+                className="absolute inset-y-0 end-0 flex items-center pe-3 text-gray-400 hover:text-gray-600"
+              >
+                {showPw.confirm ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+              </button>
+            </div>
           </Field>
           <div className="flex justify-end">
             <Button
               disabled={!valid}
-              onClick={() => {
-                toast("Password updated");
-                setPw({ current: "", next: "", confirm: "" });
+              onClick={async () => {
+                try {
+                  await authService.updatePassword(pw.current, pw.next);
+                  toast("Password updated");
+                  setPw({ current: "", next: "", confirm: "" });
+                } catch (e) {
+                  toast("Failed to update password");
+                }
               }}
             >
               Update password

@@ -11,6 +11,7 @@ import {
   Input,
   Modal,
   PageHeader,
+  Pagination,
   Select,
   Tabs,
   Textarea,
@@ -154,9 +155,9 @@ const ENTITIES = [
     key: "animals",
     title: "Farm animals",
     singular: "animal",
-    fields: [...nameFields, { key: "active", label: "Active", type: "toggle" }],
-    columns: [...nameCols(), activeCol],
-    defaults: { name: "", active: true },
+    fields: [...nameFields],
+    columns: [...nameCols()],
+    defaults: { name: "" },
   },
   {
     key: "policies",
@@ -268,10 +269,14 @@ export function EntityTable({ entity }) {
   const [editing, setEditing] = useState(null);
   const [deleting, setDeleting] = useState(null);
   const [form, setForm] = useState({});
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
   const { data, isLoading } = useQuery({
     queryKey: ["md", entity.key],
     queryFn: svc.all,
   });
+
+  const displayData = data?.slice((page - 1) * pageSize, page * pageSize);
 
   const invalidate = (msg) => {
     qc.invalidateQueries({ queryKey: ["md", entity.key] });
@@ -317,7 +322,7 @@ export function EntityTable({ entity }) {
         </Button>
       </div>
       <DataTable
-        rows={data}
+        rows={displayData}
         loading={isLoading}
         columns={[
           ...entity.columns,
@@ -327,11 +332,13 @@ export function EntityTable({ entity }) {
             className: "w-36 text-end",
             render: (r) => (
               <div className="flex items-center justify-end gap-1">
-                <Toggle
-                  checked={!!r.active}
-                  onChange={() => quickToggle.mutate(r)}
-                  label={`Toggle ${String(r.name)}`}
-                />
+                {entity.fields.some(f => f.key === "active") && (
+                  <Toggle
+                    checked={!!r.active}
+                    onChange={() => quickToggle.mutate(r)}
+                    label={`Toggle ${String(r.name)}`}
+                  />
+                )}
                 <IconButton label="Edit" onClick={() => open(r)}>
                   <Pencil className="size-4" />
                 </IconButton>
@@ -347,6 +354,14 @@ export function EntityTable({ entity }) {
           },
         ]}
       />
+      {data && data.length > pageSize && (
+        <Pagination
+          page={page}
+          pageSize={pageSize}
+          total={data.length}
+          onPage={setPage}
+        />
+      )}
 
       <Modal
         open={!!editing}

@@ -47,11 +47,13 @@ module.exports = {
       let icon = null;
       if (req.files && req.files.image) {
         icon = await helper.fileUpload(req.files.image, 'animals');
+      } else if (req.body.icon) {
+        icon = req.body.icon;
       }
 
       const item = await friendlyAnimals.create({
         title: req.body.title,
-        icon,
+        image: icon,
         status: req.body.status || 'Active',
       });
 
@@ -73,7 +75,9 @@ module.exports = {
       if (req.body.status !== undefined) updateData.status = req.body.status;
       
       if (req.files && req.files.image) {
-        updateData.icon = await helper.fileUpload(req.files.image, 'animals');
+        updateData.image = await helper.fileUpload(req.files.image, 'animals');
+      } else if (req.body.icon !== undefined) {
+        updateData.image = req.body.icon;
       }
 
       await item.update(updateData);

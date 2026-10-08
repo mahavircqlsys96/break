@@ -14,7 +14,7 @@ module.exports = {
             const limit = parseInt(req.query.limit) || 10;
             const search = req.query.search || '';
             const offset = (page - 1) * limit;
-            let role = req.query.role || 'user';
+            let role = req.query.role || 'User';
 
             let whereClause = { role, deletedAt: null };
 
@@ -49,7 +49,7 @@ module.exports = {
             });
             const ids = user_list.map((u) => u.id);
             let bookingMap = {};
-            if (ids.length && role === 'user') {
+            if (ids.length && role === 'User') {
                 const bc = await bookings.findAll({
                     attributes: ['userId', [fn('COUNT', col('id')), 'cnt']],
                     where: { userId: { [Op.in]: ids } },
@@ -60,7 +60,7 @@ module.exports = {
             }
             const user_list_json = user_list.map((u) => {
                 const j = u.toJSON();
-                if (role === 'user') j.total_bookings = bookingMap[String(u.id)] || 0;
+                if (role === 'User') j.total_bookings = bookingMap[String(u.id)] || 0;
                 return j;
             });
             return helper.success(res, 'user list fetched', {
@@ -78,14 +78,54 @@ module.exports = {
 
     userList2: async (req, res) => {
         try {
-            const user_list = await users.findAll({
-                where: {
-                    role: "individual"
-                },
+            const page = parseInt(req.query.page) || 1;
+            const limit = parseInt(req.query.limit) || 10;
+            const search = req.query.search || '';
+            const status = req.query.status || '';
+            const offset = (page - 1) * limit;
+
+            let whereClause = {
+                role: "Host",
+                deletedAt: null
+            };
+
+            if (status && status !== 'all') {
+                whereClause.status = status;
+            }
+
+            if (search) {
+                whereClause = {
+                    [Op.and]: [
+                        { ...whereClause },
+                        {
+                            [Op.or]: [
+                                { name: { [Op.like]: `%${search}%` } },
+                                { email: { [Op.like]: `%${search}%` } },
+                                Sequelize.where(
+                                    Sequelize.fn("CONCAT", Sequelize.col("name"), " "),
+                                    { [Op.like]: `%${search}%` }
+                                ),
+                            ],
+                        },
+                    ],
+                };
+            }
+
+            const { count, rows: user_list } = await users.findAndCountAll({
+                where: whereClause,
+                limit,
+                offset,
                 order: [['createdAt', 'DESC']],
             });
-            return helper.success(res, 'user list fetched',
-                user_list);
+
+            console.log("USERLIST2 DEBUG:", { whereClause, count, limit, offset, search, status, page });
+
+            return helper.success(res, 'user list fetched', {
+                user_list,
+                total: count,
+                currentPage: page,
+                totalPages: Math.ceil(count / limit)
+            });
         } catch (error) {
             console.log(error)
             return helper.failed(res, 'Something went wrong')
@@ -152,9 +192,6 @@ module.exports = {
 
             const user_details = await users.findOne({
                 where: { id },
-                include: [
-                    { model: users, as: 'referrer', attributes: ['id', 'name', 'referralCode'] }
-                ],
                 paranoid: false,
             });
 
@@ -166,7 +203,9 @@ module.exports = {
                 attributes: [[sequelize.fn('SUM', sequelize.col('amount')), 'totalSpent']],
                 where: {
                     userId: id,
-                    paymentStatus: 'paid'
+                    status: {
+                        [Op.in]: ['Confirmed', 'Completed']
+                    }
                 },
                 raw: true
             });

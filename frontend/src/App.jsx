@@ -47,11 +47,11 @@ export function App() {
       <Route path="bookings/:id" element={<BookingDetailPage />} />
       <Route path="payments" element={<PaymentsPage />} />
       <Route path="reviews" element={<ReviewsPage />} />
-      <Route path="support" element={<SupportPage />} />
-      <Route path="enquiries" element={<EnquiriesPage />} />
+      <Route path="reports" element={<SupportPage />} />
+      <Route path="contact-us" element={<EnquiriesPage />} />
       <Route path="notifications" element={<NotificationsPage />} />
       <Route path="master-data" element={<MasterDataPage />} />
-      <Route path="content" element={<ContentPage />} />
+      <Route path="cms/:slug" element={<ContentPage />} />
       <Route path="settings" element={<SettingsPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />

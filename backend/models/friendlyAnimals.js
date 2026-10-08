@@ -14,6 +14,11 @@ module.exports = function(sequelize, DataTypes) {
     image: {
       type: DataTypes.STRING(500),
       allowNull: true
+    },
+    status: {
+      type: DataTypes.ENUM('Active', 'Inactive'),
+      allowNull: false,
+      defaultValue: "Active"
     }
   }, {
     sequelize,

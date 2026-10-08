@@ -94,20 +94,19 @@ module.exports = {
   },
 
 
-  fileUpload: async (file, folder) => {
-    if (file) {
-      var extension = path.extname(file.name);
-      var filename = uuid() + extension;
-      file.mv(
-        process.cwd() + `/public/images/${folder}/` + filename,
-        function (err) {
-          if (err) return err;
-        }
-      );
-    }
-
-    let fullpath = `/images/${folder}/` + filename
-    return fullpath;
+  fileUpload: (file, folder) => {
+    return new Promise((resolve, reject) => {
+      if (!file) return reject(new Error("No file provided"));
+      
+      const extension = path.extname(file.name);
+      const filename = uuid() + extension;
+      const destPath = path.join(__dirname, `../public/images/${folder}`, filename);
+      
+      file.mv(destPath, (err) => {
+        if (err) return reject(err);
+        resolve(`/images/${folder}/${filename}`);
+      });
+    });
   },
   success: function (res, message, body = {}, code = 200) {
     return res.status(code).json({

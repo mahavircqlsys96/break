@@ -29,7 +29,7 @@ module.exports = (io) => {
 
   // ─── Optional JWT Auth ───
   router.get('/home', optionalAuthenticateJWT, userController.home);
-  router.get('/filterPosts', optionalAuthenticateJWT, userController.filterPosts);
+
 
   // ─── JWT Auth ───
   router.use(authenticateJWT);
@@ -48,11 +48,6 @@ module.exports = (io) => {
   router.get('/notificationList', authController.notificationList);
   router.delete('/clearNotification', authController.clearNotification);
 
-  router.post('/followUser', userController.followUser);
-  router.get('/getFollowers', userController.getFollowers);
-  router.get('/getFollowing', userController.getFollowing);
-  router.get('/walletDetails', userController.walletDetails);
-  // Host
   router.get('/hostHome', hostController.hostHome);
 
   ///properites///

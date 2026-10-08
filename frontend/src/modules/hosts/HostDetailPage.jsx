@@ -19,6 +19,7 @@ import {
   DataTable,
   DetailList,
   PageHeader,
+  Pagination,
   PageLoader,
   StatCard,
   StatusBadge,
@@ -48,46 +49,23 @@ export function HostDetailPage() {
     },
   });
 
+  const [payoutPage, setPayoutPage] = useState(1);
+  const payoutPageSize = 10;
+
   if (isLoading || !data) return <PageLoader />;
   const h = data.host;
 
+  const displayPayouts = data?.payouts?.slice((payoutPage - 1) * payoutPageSize, payoutPage * payoutPageSize);
+
   return (
     <>
-      <PageHeader
-        back={<BackLink to="/hosts">Hosts</BackLink>}
-        title={
-          <span className="inline-flex items-center gap-2">
-            {h.name}
-            {h.verified && <BadgeCheck className="size-6 text-accent" />}
-          </span>
-        }
-        subtitle={`Host since ${date(h.joinedAt)}`}
-        actions={
-          h.status === "active" ? (
-            <Button
-              variant="danger-soft"
-              icon={<Ban className="size-4" />}
-              onClick={() => setSuspend(true)}
-            >
-              Suspend host
-            </Button>
-          ) : (
-            <Button
-              icon={<CheckCircle2 className="size-4" />}
-              loading={status.isPending}
-              onClick={() => status.mutate("active")}
-            >
-              {h.status === "pending" ? "Verify & approve" : "Reactivate"}
-            </Button>
-          )
-        }
-      />
+
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div className="space-y-4">
           <Card>
             <div className="flex flex-col items-center pb-4 text-center">
-              <Avatar name={h.name} size={84} />
+              <Avatar name={h.name} src={h.image} size={84} />
               <p className="mt-3 text-lg font-bold">{h.name}</p>
               <p className="text-[13px] text-ink-muted">{h.email}</p>
               <div className="mt-3">
@@ -158,7 +136,7 @@ export function HostDetailPage() {
           <Card title="Payouts" padded={false}>
             <div className="mt-3">
               <DataTable
-                rows={data.payouts}
+                rows={displayPayouts}
                 columns={[
                   {
                     key: "period",
@@ -188,6 +166,14 @@ export function HostDetailPage() {
                   },
                 ]}
               />
+              {data.payouts && data.payouts.length > payoutPageSize && (
+                <Pagination
+                  page={payoutPage}
+                  pageSize={payoutPageSize}
+                  total={data.payouts.length}
+                  onPage={setPayoutPage}
+                />
+              )}
             </div>
           </Card>
         </div>

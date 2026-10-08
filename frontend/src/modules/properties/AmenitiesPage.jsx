@@ -9,30 +9,16 @@ const ENTITY = {
   fields: [
     ...nameFields,
     { key: "icon", label: "Icon", type: "icon" },
-    {
-      key: "group",
-      label: "Group",
-      type: "select",
-      options: ["essentials", "features", "safety", "outdoor"],
-    },
     { key: "active", label: "Active", type: "toggle" },
   ],
   columns: [
     ...nameCols(true),
-    {
-      key: "group",
-      header: "Group",
-      render: (r) => (
-        <Badge tone="accent">{titleCase(String(r.group))}</Badge>
-      ),
-    },
     activeCol,
   ],
   defaults: {
     name: "",
     nameAr: "",
     icon: "Sparkles",
-    group: "essentials",
     active: true,
   },
 };
