@@ -38,7 +38,7 @@ module.exports = function(sequelize, DataTypes) {
     }
   }, {
     sequelize,
-    tableName: 'reportuser',
+    tableName: 'reportUser',
     timestamps: true,
     indexes: [
       {
