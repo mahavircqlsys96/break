@@ -35,7 +35,7 @@ const STEPS = [
 
 const EMPTY = {
   name: "",
-  categoryId: "",
+  propertyTypeId: "",
   cityId: "",
   area: "",
   address: "",
@@ -182,7 +182,7 @@ export function PropertyFormPage() {
     if (s === 0) {
       if (!form.name.trim()) e.name = "Property name is required";
       if (!form.hostId) e.hostId = "Choose the host who owns this property";
-      if (!form.categoryId) e.categoryId = "Select a property type";
+      if (!form.propertyTypeId) e.propertyTypeId = "Select a property type";
       if (form.description.trim().length < 20)
         e.description = "Write at least 20 characters";
     }
@@ -205,7 +205,7 @@ export function PropertyFormPage() {
 
   if ((editing && existing.isLoading) || !md.ready) return <PageLoader />;
 
-  const category = md.categories.find((c) => c.id === form.categoryId);
+  const category = md.propertyTypes.find((c) => c.id === form.propertyTypeId);
   const city = md.cities.find((c) => c.id === form.cityId);
   const host = hosts.data?.items.find((h) => h.id === form.hostId);
 
@@ -252,18 +252,18 @@ export function PropertyFormPage() {
                   ]}
                 />
               </Field>
-              <Field label="Property type" error={errors.categoryId}>
+              <Field label="Property type" error={errors.propertyTypeId}>
                 <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
-                  {md.categories
+                  {md.propertyTypes
                     .filter((c) => c.active)
                     .map((c) => (
                       <button
                         key={c.id}
                         type="button"
-                        onClick={() => set("categoryId", c.id)}
+                        onClick={() => set("propertyTypeId", c.id)}
                         className={cn(
                           "flex flex-col items-center gap-2 rounded-2xl border px-3 py-4 text-[13px] font-semibold transition",
-                          form.categoryId === c.id
+                          form.propertyTypeId === c.id
                             ? "border-accent bg-accent-soft text-primary"
                             : "border-line hover:border-accent/60",
                         )}
@@ -406,7 +406,7 @@ export function PropertyFormPage() {
                     ))}
                 </div>
               </Field>
-              {form.categoryId === "cat_farm" && (
+              {form.propertyTypeId === "cat_farm" && (
                 <Field label="Farm animals">
                   <div className="flex flex-wrap gap-2">
                     {md.animals

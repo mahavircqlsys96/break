@@ -66,9 +66,9 @@ export const nameFields = [
 
 const ENTITIES = [
   {
-    key: "categories",
-    title: "Categories",
-    singular: "category",
+    key: "propertyTypes",
+    title: "Property types",
+    singular: "property type",
     fields: [
       ...nameFields,
       { key: "icon", label: "Icon", type: "icon" },
@@ -243,7 +243,7 @@ const ENTITIES = [
 ];
 
 export function MasterDataPage() {
-  const [tab, setTab] = useState("categories");
+  const [tab, setTab] = useState("propertyTypes");
   const entity = ENTITIES.find((e) => e.key === tab);
   return (
     <>

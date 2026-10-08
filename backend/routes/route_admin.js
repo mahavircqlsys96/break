@@ -8,11 +8,11 @@ const contactUsController = require('../controllers/admin/contactUsController');
 const dashboardController = require('../controllers/admin/dashboardController');
 const userController = require('../controllers/admin/userController');
 const bookingController = require('../controllers/admin/bookingController');
-const categoryController = require('../controllers/admin/categoryController');
 const reportController = require('../controllers/admin/reportController');
 const propertyTypeController = require('../controllers/admin/propertyTypeController');
 const amenityController = require('../controllers/admin/amenityController');
 const animalController = require('../controllers/admin/animalController');
+const propertiesController = require('../controllers/apis/propertiesController');
 // ─── Public Admin Routes ───
 router.post('/auth/login', authController.login);
 router.post('/forgotPassword', authController.forgotPassword);
@@ -55,12 +55,10 @@ router.get('/contactUs/:id', contactUsController.view_contactUs);
 router.put('/contactUs/:id', contactUsController.update_contactUs);
 router.delete('/deleteContactUs/:id', contactUsController.delete_contactUs);
 
-// Properties Types (Custom categories)
-router.get('/categories', categoryController.categoryList);
-router.post('/categories', categoryController.createCategory);
-router.put('/categories/:id', categoryController.updateCategory);
-router.delete('/categories/:id', categoryController.deleteCategory);
-router.put('/categories/:id/toggle', categoryController.toggleCategoryStatus);
+// Properties
+router.get('/properties', propertiesController.getProperties);
+router.get('/properties/:propertyTypeId', propertiesController.propertyDetail);
+router.put('/properties/:propertyTypeId', propertiesController.editProperties);
 
 // Property Types
 router.get('/propertyTypes', propertyTypeController.list);

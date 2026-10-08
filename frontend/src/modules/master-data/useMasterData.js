@@ -3,9 +3,9 @@ import { masterData } from "@/services";
 
 /** Lookup lists used by filters and forms across modules. */
 export function useMasterData() {
-  const categories = useQuery({
-    queryKey: ["md", "categories"],
-    queryFn: masterData.categories.all,
+  const propertyTypes = useQuery({
+    queryKey: ["md", "propertyTypes"],
+    queryFn: masterData.propertyTypes.all,
   });
   const cities = useQuery({
     queryKey: ["md", "cities"],
@@ -24,13 +24,13 @@ export function useMasterData() {
     queryFn: masterData.policies.all,
   });
   return {
-    categories: categories.data ?? [],
+    propertyTypes: propertyTypes.data ?? [],
     cities: cities.data ?? [],
     amenities: amenities.data ?? [],
     animals: animals.data ?? [],
     policies: policies.data ?? [],
     ready: !!(
-      categories.data &&
+      propertyTypes.data &&
       cities.data &&
       amenities.data &&
       animals.data &&

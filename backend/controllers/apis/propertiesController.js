@@ -583,6 +583,17 @@ module.exports = {
             },
 
             {
+              model: users,
+              as: "host",
+              attributes: [
+                "id",
+                "name",
+                "image",
+              ],
+              required: false,
+            },
+
+            {
               model: propertiesPhotos,
               as: "propertiesPhotos",
               attributes: [
@@ -777,6 +788,18 @@ module.exports = {
               "title",
               "icon",
               "status",
+            ],
+            required: false,
+          },
+
+          // Host
+          {
+            model: users,
+            as: "host",
+            attributes: [
+              "id",
+              "name",
+              "image",
             ],
             required: false,
           },

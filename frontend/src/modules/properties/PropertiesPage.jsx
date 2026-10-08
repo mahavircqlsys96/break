@@ -68,10 +68,10 @@ export function PropertiesPage() {
           placeholder="Search name, area or host"
         >
           <FilterSelect
-            allLabel="All categories"
-            value={list.filters.categoryId}
-            onChange={(v) => list.setFilter("categoryId", v)}
-            options={md.categories.map((c) => ({ value: c.id, label: c.name }))}
+            allLabel="All property types"
+            value={list.filters.propertyTypeId}
+            onChange={(v) => list.setFilter("propertyTypeId", v)}
+            options={md.propertyTypes.map((pt) => ({ value: pt.id, label: pt.name }))}
           />
 
           <div className="ms-auto flex rounded-full bg-bg p-0.5">

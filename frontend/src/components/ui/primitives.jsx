@@ -340,7 +340,7 @@ export function Stars({ value }) {
   return (
     <span className="inline-flex items-center gap-1 text-[13px] font-semibold">
       <span className="text-warning">★</span>
-      {value ? value.toFixed(value % 1 ? 2 : 1) : "—"}
+      {value ? Number(value).toFixed(Number(value) % 1 ? 2 : 1) : "—"}
     </span>
   );
 }

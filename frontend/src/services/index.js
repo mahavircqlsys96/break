@@ -368,7 +368,45 @@ export const propertyService = {
           search: [(p) => p.name, (p) => p.area, (p) => p.hostName],
         }),
       q,
-    ),
+    ).then((res) => {
+      if (res && res.success !== undefined) {
+        const items = res.body?.properties || [];
+        return {
+          items: items.map(p => ({
+            ...p,
+            name: p.basicInfo || '—',
+            area: p.location || '—',
+            cityName: p.location || '—',
+            hostName: p.host?.name || '—',
+            categoryName: p.propertyType?.title || '—',
+            pricePerNight: p.price || 0,
+            rating: Number(p.avgRating) || 0,
+            reviewCount: p.ratingCount || 0,
+            views: p.views || 0,
+            bookings: p.total_bookings || 0, // Need to ensure the backend provides this if available
+            status: p.status ? String(p.status).toLowerCase() : 'pending',
+            bedrooms: p.bedroom || 0,
+            bathrooms: p.bathroom || 0,
+            maxGuests: p.guest || 0,
+            amenityIds: p.propertiesKeyAmenities ? p.propertiesKeyAmenities.map(a => String(a.amenitiesId)) : [],
+            animalIds: p.propertiesAnimals ? p.propertiesAnimals.map(a => String(a.animalId)) : [],
+            houseRules: p.houseRules || { checkIn: "15:00", checkOut: "11:00", smoking: false, parties: false, pets: false },
+            cancellationPolicyId: p.cancellationPolicyId || null,
+            petsAllowed: p.propertiesAnimals ? p.propertiesAnimals.length > 0 : false,
+            photos: p.propertiesPhotos?.map(img => {
+              const url = img.image;
+              if (!url) return "";
+              if (url.startsWith('http://') || url.startsWith('https://')) return url;
+              return import.meta.env.VITE_IMAGE_BASE + (url.startsWith('/') ? url.substring(1) : url);
+            }).filter(Boolean) || [],
+          })),
+          total: res.body?.pagination?.totalRecords || 0,
+          page: res.body?.pagination?.currentPage || 1,
+          pageSize: q?.pageSize || 10,
+        };
+      }
+      return res;
+    }),
   get: (id) =>
     api.get(`/admin/properties/${id}`, () => {
       const property = findOr404(db.properties, id);
@@ -380,6 +418,44 @@ export const propertyService = {
           .slice(0, 8)
           .map(bookingView),
       };
+    }).then((res) => {
+      if (res && res.success !== undefined) {
+        const p = res.body || {};
+        return {
+          property: {
+            ...p,
+            name: p.basicInfo || '—',
+            area: p.location || '—',
+            cityName: p.location || '—',
+            hostName: p.host?.name || '—',
+            categoryName: p.propertyType?.title || '—',
+            pricePerNight: p.price || 0,
+            rating: p.avgRating || 0,
+            reviewCount: p.ratingCount || 0,
+            views: p.views || 0,
+            bookings: p.total_bookings || 0,
+            status: p.status ? String(p.status).toLowerCase() : 'pending',
+            bedrooms: p.bedroom || 0,
+            bathrooms: p.bathroom || 0,
+            maxGuests: p.guest || 0,
+            amenityIds: p.propertiesKeyAmenities ? p.propertiesKeyAmenities.map(a => String(a.amenitiesId)) : [],
+            animalIds: p.propertiesAnimals ? p.propertiesAnimals.map(a => String(a.animalId)) : [],
+            houseRules: p.houseRules || { checkIn: "15:00", checkOut: "11:00", smoking: false, parties: false, pets: false },
+            cancellationPolicyId: p.cancellationPolicyId || null,
+            petsAllowed: p.propertiesAnimals ? p.propertiesAnimals.length > 0 : false,
+            photos: p.propertiesPhotos?.map(img => {
+              const url = img.image;
+              if (!url) return "";
+              if (url.startsWith('http://') || url.startsWith('https://')) return url;
+              return import.meta.env.VITE_IMAGE_BASE + (url.startsWith('/') ? url.substring(1) : url);
+            }).filter(Boolean) || [],
+          },
+          host: p.host ? { ...p.host, rating: p.host.rating || 0, responseRate: p.host.responseRate || 0 } : { id: "unknown", name: "Unknown", rating: 0, responseRate: 0 },
+          reviews: p.reviews || [],
+          bookings: p.bookings || [],
+        };
+      }
+      return res;
     }),
   create: (input) =>
     api.post("/admin/properties", input, () => {
