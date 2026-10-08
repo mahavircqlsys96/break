@@ -22,7 +22,7 @@ module.exports = function(sequelize, DataTypes) {
     }
   }, {
     sequelize,
-    tableName: 'propertyTypes',
+    tableName: 'propertytypes',
     timestamps: true,
     paranoid: true,
     indexes: [

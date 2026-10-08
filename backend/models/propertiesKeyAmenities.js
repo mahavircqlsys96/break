@@ -31,7 +31,7 @@ module.exports = function (sequelize, DataTypes) {
 
   }, {
     sequelize,
-    tableName: 'propertiesKeyAmenities',
+    tableName: 'propertieskeyamenities',
     timestamps: true,
     indexes: [
       {

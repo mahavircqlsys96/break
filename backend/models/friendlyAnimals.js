@@ -22,7 +22,7 @@ module.exports = function(sequelize, DataTypes) {
     }
   }, {
     sequelize,
-    tableName: 'friendlyAnimals',
+    tableName: 'friendlyanimals',
     timestamps: true,
     indexes: [
       {

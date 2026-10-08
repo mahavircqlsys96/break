@@ -21,7 +21,7 @@ module.exports = function(sequelize, DataTypes) {
     }
   }, {
     sequelize,
-    tableName: 'propertiesPhotos',
+    tableName: 'propertiesphotos',
     timestamps: true,
     indexes: [
       {

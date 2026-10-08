@@ -41,7 +41,7 @@ module.exports = function(sequelize, DataTypes) {
     }
   }, {
     sequelize,
-    tableName: 'chatRoom',
+    tableName: 'chatroom',
     timestamps: true,
     indexes: [
       {
