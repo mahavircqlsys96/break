@@ -12,6 +12,8 @@ const reportController = require('../controllers/admin/reportController');
 const propertyTypeController = require('../controllers/admin/propertyTypeController');
 const amenityController = require('../controllers/admin/amenityController');
 const animalController = require('../controllers/admin/animalController');
+const hostResourceController = require('../controllers/admin/hostResourceController');
+const faqController = require('../controllers/admin/faqController');
 const propertiesController = require('../controllers/apis/propertiesController');
 // ─── Public Admin Routes ───
 router.post('/auth/login', authController.login);
@@ -96,5 +98,18 @@ router.put('/bookings/:id/status', bookingController.updateBookingStatus);
 router.get('/reports', reportController.reportList);
 router.put('/reports/:id', reportController.updateReportStatus);
 
+// Host Resources & Guides
+router.get('/hostResources', hostResourceController.list);
+router.post('/hostResources', hostResourceController.create);
+router.put('/hostResources/:id', hostResourceController.update);
+router.delete('/hostResources/:id', hostResourceController.delete);
+router.put('/hostResources/:id/toggle', hostResourceController.toggleStatus);
+
+// FAQs
+router.get('/faqs', faqController.list);
+router.post('/faqs', faqController.create);
+router.put('/faqs/:id', faqController.update);
+router.delete('/faqs/:id', faqController.delete);
+router.put('/faqs/:id/toggle', faqController.toggleStatus);
 
 module.exports = router;

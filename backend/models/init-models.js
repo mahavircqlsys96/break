@@ -17,6 +17,8 @@ var _reviews = require("./reviews");
 var _users = require("./users");
 var _wishlists = require("./wishlists");
 var _propertiesAnimals = require("./propertiesAnimals");
+var _hostResources = require("./hostResources");
+var _faqs = require("./faqs");
 
 
 function initModels(sequelize) {
@@ -38,6 +40,8 @@ function initModels(sequelize) {
   var reviews = _reviews(sequelize, DataTypes);
   var users = _users(sequelize, DataTypes);
   var wishlists = _wishlists(sequelize, DataTypes);
+  var hostResources = _hostResources(sequelize, DataTypes);
+  var faqs = _faqs(sequelize, DataTypes);
 
   // model: propertyTypes,
   //         as: "propertyType",
@@ -118,7 +122,9 @@ function initModels(sequelize) {
     reviews,
     users,
     wishlists,
-    propertiesAnimals
+    propertiesAnimals,
+    hostResources,
+    faqs
   };
 }
 module.exports = initModels;

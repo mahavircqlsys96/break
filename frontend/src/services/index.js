@@ -768,6 +768,25 @@ const mapToFrontend = (path, item) => {
   if (["propertyTypes", "friendlyAnimals"].includes(path)) {
     return { ...item, name: item.title, active: item.status === "Active" };
   }
+  if (path === "hostResources") {
+    return {
+      ...item,
+      name: item.title || item.name,
+      title: item.title || item.name,
+      active: item.status !== undefined ? item.status === "Active" : !!item.active,
+    };
+  }
+  if (path === "faqs") {
+    return {
+      ...item,
+      name: item.question,
+      title: item.question,
+      question: item.question,
+      type: item.category || "Bookings & guests",
+      category: item.category || "Bookings & guests",
+      active: item.status !== undefined ? item.status === "Active" : !!item.active,
+    };
+  }
   return item;
 };
 
@@ -786,6 +805,25 @@ const mapToBackend = (path, input) => {
   }
   if (["propertyTypes", "friendlyAnimals"].includes(path)) {
     return { ...input, title: input.name, status: input.active ? "Active" : "Inactive" };
+  }
+  if (path === "hostResources") {
+    return {
+      ...input,
+      title: input.name || input.title,
+      status: input.active ? "Active" : "Inactive",
+    };
+  }
+  if (path === "faqs") {
+    return {
+      ...input,
+      question: input.question || input.name || input.title,
+      answer: input.answer || input.content,
+      category: input.category || input.type || "Bookings & guests",
+      section: input.section || "General",
+      targetAudience: input.targetAudience || "Host",
+      sortOrder: input.sortOrder !== undefined ? parseInt(input.sortOrder) : 0,
+      status: input.active ? "Active" : "Inactive",
+    };
   }
   return input;
 };
@@ -830,6 +868,8 @@ export const masterData = {
   policies: crud("cancellation-policies", db.cancellationPolicies, "cp"),
   countries: crud("countries", db.countries, "c"),
   propertyTypes: crud("propertyTypes", db.propertyTypes, "pt"),
+  hostResources: crud("hostResources", db.hostResources || [], "hr"),
+  faqs: crud("faqs", db.faqs || [], "faq"),
 };
 
 // ---------- moderation ----------

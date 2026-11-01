@@ -24,6 +24,8 @@ import { SettingsPage } from "./modules/settings/SettingsPage";
 import { PropertyTypesPage } from "./modules/properties/PropertyTypesPage";
 import { AmenitiesPage } from "./modules/properties/AmenitiesPage";
 import { AnimalsPage } from "./modules/properties/AnimalsPage";
+import { HostResourcesPage } from "./modules/resources/HostResourcesPage";
+import { FaqsPage } from "./modules/faqs/FaqsPage";
 
 export function App() {
   return (
@@ -48,6 +50,8 @@ export function App() {
       <Route path="payments" element={<PaymentsPage />} />
       <Route path="reviews" element={<ReviewsPage />} />
       <Route path="reports" element={<SupportPage />} />
+      <Route path="host-resources" element={<HostResourcesPage />} />
+      <Route path="faqs" element={<FaqsPage />} />
       <Route path="contact-us" element={<EnquiriesPage />} />
       <Route path="notifications" element={<NotificationsPage />} />
       <Route path="master-data" element={<MasterDataPage />} />

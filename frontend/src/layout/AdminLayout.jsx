@@ -26,7 +26,9 @@ import {
   MapPin,
   CreditCard,
   Target,
-  PawPrint
+  PawPrint,
+  BookOpen,
+  HelpCircle,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { Logo } from "@/components/Logo";
@@ -64,6 +66,8 @@ const NAV = [
   {
     group: "CONTENT & SUPPORT",
     items: [
+      { to: "/host-resources", label: "Host Resources", icon: BookOpen },
+      { to: "/faqs", label: "FAQs", icon: HelpCircle },
       { to: "/reports", label: "Reports", icon: Flag },
       { to: "/notifications", label: "Notifications", icon: Bell },
       { to: "/contact-us", label: "Support", icon: Headphones },

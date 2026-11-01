@@ -340,7 +340,7 @@ export function EntityTable({ entity }) {
     setEditing(row);
   };
   const valid = entity.fields
-    .filter((f) => f.type === "text")
+    .filter((f) => f.required === true || (f.required !== false && (f.key === "name" || f.key === "title")))
     .every((f) => String(form[f.key] ?? "").trim());
 
   return (
