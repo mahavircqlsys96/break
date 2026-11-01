@@ -64,6 +64,21 @@ export const nameFields = [
   { key: "name", label: "Name", type: "text" },
 ];
 
+export const AMENITY_TYPES = [
+  "Essentials",
+  "Kitchen & dining",
+  "Bathroom",
+  "Entertainment",
+  "Pool & wellness",
+  "Outdoor & view",
+  "Farm & desert",
+  "Sports & activities",
+  "Family & kids",
+  "Privacy & safety",
+  "Access & parking",
+  "Services & location",
+];
+
 const ENTITIES = [
   {
     key: "propertyTypes",
@@ -86,32 +101,34 @@ const ENTITIES = [
     key: "amenities",
     title: "Amenities",
     singular: "amenity",
+    filterKey: "type",
+    filterOptions: AMENITY_TYPES,
     fields: [
       ...nameFields,
-      { key: "icon", label: "Icon", type: "icon" },
       {
-        key: "group",
-        label: "Group",
+        key: "type",
+        label: "Amenity Type",
         type: "select",
-        options: ["essentials", "features", "safety", "outdoor"],
+        options: AMENITY_TYPES,
       },
+      { key: "icon", label: "Icon", type: "icon" },
       { key: "active", label: "Active", type: "toggle" },
     ],
     columns: [
       ...nameCols(true),
       {
-        key: "group",
-        header: "Group",
+        key: "type",
+        header: "Amenity Type",
         render: (r) => (
-          <Badge tone="accent">{titleCase(String(r.group))}</Badge>
+          <Badge tone="accent">{r.type || r.group || "Essentials"}</Badge>
         ),
       },
       activeCol,
     ],
     defaults: {
       name: "",
+      type: "Essentials",
       icon: "Sparkles",
-      group: "essentials",
       active: true,
     },
   },
@@ -270,13 +287,29 @@ export function EntityTable({ entity }) {
   const [deleting, setDeleting] = useState(null);
   const [form, setForm] = useState({});
   const [page, setPage] = useState(1);
+  const [filterVal, setFilterVal] = useState("all");
+  const [search, setSearch] = useState("");
   const pageSize = 10;
   const { data, isLoading } = useQuery({
     queryKey: ["md", entity.key],
     queryFn: svc.all,
   });
 
-  const displayData = data?.slice((page - 1) * pageSize, page * pageSize);
+  const filteredData = (data ?? []).filter((item) => {
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      const matchName = String(item.name || item.title || "").toLowerCase().includes(q);
+      const matchType = String(item.type || item.group || "").toLowerCase().includes(q);
+      if (!matchName && !matchType) return false;
+    }
+    if (entity.filterKey && filterVal !== "all") {
+      const val = item[entity.filterKey] || item.type || item.group;
+      return String(val || "").toLowerCase() === filterVal.toLowerCase();
+    }
+    return true;
+  });
+
+  const displayData = filteredData.slice((page - 1) * pageSize, page * pageSize);
 
   const invalidate = (msg) => {
     qc.invalidateQueries({ queryKey: ["md", entity.key] });
@@ -312,15 +345,76 @@ export function EntityTable({ entity }) {
 
   return (
     <div className="card overflow-hidden">
-      <div className="flex items-center justify-between gap-3 p-4">
-        <p className="text-[13px] text-ink-muted">
-          <b className="text-ink">{data?.length ?? 0}</b>{" "}
-          {entity.title.toLowerCase()}
-        </p>
+      <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3">
+          <p className="text-[13px] text-ink-muted">
+            <b className="text-ink">{filteredData.length}</b>{" "}
+            {entity.title.toLowerCase()}
+            {filterVal !== "all" && <span className="text-primary font-medium"> in {filterVal}</span>}
+          </p>
+          <div className="relative">
+            <Input
+              type="search"
+              placeholder={`Search ${entity.title.toLowerCase()}...`}
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
+              className="h-8 w-44 text-xs sm:w-60"
+            />
+          </div>
+        </div>
         <Button icon={<Plus className="size-4" />} onClick={() => open("new")}>
           Add {entity.singular}
         </Button>
       </div>
+
+      {entity.filterKey && entity.filterOptions && (
+        <div className="flex flex-wrap items-center gap-1.5 border-b border-line/70 bg-canvas-soft/40 px-4 py-2.5">
+          <button
+            type="button"
+            onClick={() => {
+              setFilterVal("all");
+              setPage(1);
+            }}
+            className={cn(
+              "rounded-full px-3 py-1 text-xs font-semibold transition",
+              filterVal === "all"
+                ? "bg-primary text-white shadow-sm"
+                : "border border-line bg-surface text-ink-muted hover:border-accent hover:text-primary"
+            )}
+          >
+            All ({data?.length ?? 0})
+          </button>
+          {entity.filterOptions.map((opt) => {
+            const count = (data ?? []).filter(
+              (d) =>
+                String(d[entity.filterKey] || d.type || d.group || "").toLowerCase() ===
+                opt.toLowerCase()
+            ).length;
+            return (
+              <button
+                key={opt}
+                type="button"
+                onClick={() => {
+                  setFilterVal(opt);
+                  setPage(1);
+                }}
+                className={cn(
+                  "rounded-full px-3 py-1 text-xs font-semibold transition",
+                  filterVal.toLowerCase() === opt.toLowerCase()
+                    ? "bg-primary text-white shadow-sm"
+                    : "border border-line bg-surface text-ink-muted hover:border-accent hover:text-primary"
+                )}
+              >
+                {opt} {count > 0 && <span className="opacity-75 font-normal">({count})</span>}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       <DataTable
         rows={displayData}
         loading={isLoading}
@@ -332,7 +426,7 @@ export function EntityTable({ entity }) {
             className: "w-36 text-end",
             render: (r) => (
               <div className="flex items-center justify-end gap-1">
-                {entity.fields.some(f => f.key === "active") && (
+                {entity.fields.some((f) => f.key === "active") && (
                   <Toggle
                     checked={!!r.active}
                     onChange={() => quickToggle.mutate(r)}
@@ -354,11 +448,11 @@ export function EntityTable({ entity }) {
           },
         ]}
       />
-      {data && data.length > pageSize && (
+      {filteredData.length > pageSize && (
         <Pagination
           page={page}
           pageSize={pageSize}
-          total={data.length}
+          total={filteredData.length}
           onPage={setPage}
         />
       )}
@@ -408,10 +502,14 @@ export function EntityTable({ entity }) {
                   <Select
                     value={String(v ?? "")}
                     onChange={(e) => set(e.target.value)}
-                    options={f.options.map((o) => ({
-                      value: o,
-                      label: titleCase(o),
-                    }))}
+                    options={f.options.map((o) =>
+                      typeof o === "object"
+                        ? o
+                        : {
+                            value: o,
+                            label: o,
+                          }
+                    )}
                   />
                 ) : f.type === "icon" ? (
                   <div className="grid grid-cols-6 gap-2 sm:grid-cols-9">

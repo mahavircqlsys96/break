@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
-import { BadgeCheck, UserRound, Eye, Trash2 } from "lucide-react";
+import { BadgeCheck, UserRound, Eye, Trash2, Check } from "lucide-react";
 import {
   Avatar,
+  Button,
   ConfirmDialog,
   DataTable,
   EmptyState,
@@ -43,6 +44,14 @@ export function HostsPage() {
     },
   });
 
+  const approveHost = useMutation({
+    mutationFn: (r) => hostService.updateVerification(r.id, "Verified"),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["hosts"] });
+      toast("Host approved successfully");
+    },
+  });
+
   const remove = useMutation({
     mutationFn: (id) => hostService.remove(id),
     onSuccess: () => {
@@ -64,6 +73,19 @@ export function HostsPage() {
           search={list.search}
           onSearch={list.setSearch}
           placeholder="Search name, email or phone"
+          filter={
+            <FilterSelect
+              value={list.query.verificationStatus || "all"}
+              onChange={(v) => list.setFilter("verificationStatus", v === "all" ? undefined : v)}
+              options={[
+                { value: "all", label: "All Verifications" },
+                { value: "Verified", label: "Verified Only" },
+                { value: "Pending", label: "Pending Review" },
+                { value: "Rejected", label: "Rejected" },
+                { value: "Unverified", label: "Unverified" },
+              ]}
+            />
+          }
         />
         <DataTable
           rows={data?.items}
@@ -136,6 +158,37 @@ export function HostsPage() {
               ),
             },
             {
+              key: "verificationStatus",
+              header: "Verification",
+              sortable: true,
+              render: (h) => {
+                const isVerified = h.verificationStatus === "Verified";
+                const isPending = h.verificationStatus === "Pending";
+                const isRejected = h.verificationStatus === "Rejected";
+                return (
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-xs font-semibold text-ink">
+                      {h.idDocumentType || "Emirates ID"}
+                    </span>
+                    <span
+                      className={`inline-flex items-center gap-1 w-fit rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                        isVerified
+                          ? "bg-success-soft text-success"
+                          : isPending
+                          ? "bg-warning-soft text-[#B8740F]"
+                          : isRejected
+                          ? "bg-danger-soft text-danger"
+                          : "bg-surface-elevated text-ink-muted"
+                      }`}
+                    >
+                      {isVerified && <BadgeCheck className="size-3" />}
+                      {h.verificationStatus || "Unverified"}
+                    </span>
+                  </div>
+                );
+              },
+            },
+            {
               key: "status",
               header: "Status",
               render: (h) => <StatusBadge status={h.status} />,
@@ -143,9 +196,24 @@ export function HostsPage() {
             {
               key: "actions",
               header: "Action",
-              className: "w-36 text-end",
+              className: "w-44 text-end",
               render: (r) => (
-                <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+                <div className="flex items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
+                  {!r.verified && (
+                    <Button
+                      size="xs"
+                      className="bg-success text-white hover:bg-success/90 text-[11px] py-1 px-2 h-auto flex items-center gap-1"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        approveHost.mutate(r);
+                      }}
+                      loading={approveHost.isPending}
+                      title="Quick Approve Host"
+                    >
+                      <Check className="size-3" />
+                      Approve
+                    </Button>
+                  )}
                   <Toggle
                     checked={r.status === "active"}
                     onChange={() => toggleStatus.mutate(r)}

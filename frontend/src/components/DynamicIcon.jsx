@@ -16,6 +16,21 @@ import {
   WashingMachine,
   Waves,
   Wifi,
+  Tv,
+  Bath,
+  Utensils,
+  Coffee,
+  Dumbbell,
+  ShieldCheck,
+  Music,
+  Gamepad2,
+  BookOpen,
+  Sun,
+  ShieldAlert,
+  Zap,
+  Luggage,
+  CalendarCheck,
+  HeartHandshake,
 } from "lucide-react";
 
 // Icons that master data (categories, amenities) can reference by name.
@@ -37,6 +52,21 @@ export const ICONS = {
   Cross,
   Cctv,
   Sparkles,
+  Tv,
+  Bath,
+  Utensils,
+  Coffee,
+  Dumbbell,
+  ShieldCheck,
+  Music,
+  Gamepad2,
+  BookOpen,
+  Sun,
+  ShieldAlert,
+  Zap,
+  Luggage,
+  CalendarCheck,
+  HeartHandshake,
 };
 
 export function DynamicIcon({ name, ...props }) {

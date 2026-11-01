@@ -289,10 +289,15 @@ export const hostService = {
             joinedAt: u.createdAt,
             dialCode: u.countryCode || '',
             status: u.status ? u.status.toLowerCase() : 'active',
+            verified: u.verificationStatus === 'Verified' || (u.status === 'Active' && u.verificationStatus !== 'Rejected'),
+            verificationStatus: u.verificationStatus || (u.status === 'Active' ? 'Verified' : 'Pending'),
+            idDocumentType: u.idDocumentType || 'Emirates ID',
+            payoutStatus: u.payoutStatus || 'Not_Added',
+            holidayHomePermitStatus: u.holidayHomePermitStatus || 'Not_Uploaded',
             properties: u.total_properties || 0,
             bookings: u.total_bookings || 0,
             earnings: u.total_earnings || 0,
-            rating: u.rating || 0,
+            rating: u.rating || 5.0,
           })),
           total: res.body?.total || 0,
           page: res.body?.currentPage || 1,
@@ -308,6 +313,8 @@ export const hostService = {
     ]).then(([resUser, resBookings]) => {
       const u = resUser?.body || {};
       const bookings = resBookings?.body?.list || [];
+      const rawProperties = u.properties || [];
+      const isVerified = u.verificationStatus === 'Verified' || (u.status === 'Active' && u.verificationStatus !== 'Rejected');
       return {
         host: {
           ...u,
@@ -318,17 +325,49 @@ export const hostService = {
           dialCode: u.countryCode || '',
           phone: u.phone || '—',
           status: u.status ? u.status.toLowerCase() : 'active',
-          properties: u.total_properties || 0,
-          country: u.country || '—',
+          properties: u.total_properties || rawProperties.length || 0,
+          country: u.country || 'United Arab Emirates',
           gender: u.gender || 'Unknown',
           responseRate: 100,
-          idDocument: 'Passport',
+          idDocumentType: u.idDocumentType || 'Emirates ID',
+          idDocumentNumber: u.idDocumentNumber || '—',
+          idDocumentFront: u.idDocumentFront || null,
+          idDocumentBack: u.idDocumentBack || null,
+          verificationStatus: u.verificationStatus || (u.status === 'Active' ? 'Verified' : 'Pending'),
+          verificationNotes: u.verificationNotes || null,
+          verifiedAt: u.verifiedAt || null,
+          verified: isVerified,
+          idDocument: `${u.idDocumentType || 'Emirates ID'} (${u.verificationStatus || 'Pending'})`,
+          // Holiday home permit
+          holidayHomePermitDoc: u.holidayHomePermitDoc || null,
+          holidayHomePermitNumber: u.holidayHomePermitNumber || '—',
+          holidayHomePermitStatus: u.holidayHomePermitStatus || 'Not_Uploaded',
+          holidayHomePermitExpiry: u.holidayHomePermitExpiry || null,
+          // Payout details
+          accountHolderName: u.accountHolderName || u.name || '—',
+          bankName: u.bankName || '—',
+          iban: u.iban || '—',
+          trn: u.trn || '—',
+          payoutStatus: u.payoutStatus || 'Not_Added',
           bookings: u.total_bookings || 0,
-          earnings: 0,
+          earnings: u.total_earnings || 0,
           rating: 5.0,
-          verified: u.status === 'Active',
         },
-        properties: [],
+        properties: rawProperties.map(p => ({
+          ...p,
+          id: p.id,
+          name: p.basicInfo || `Property #${p.id}`,
+          area: p.location || 'Dubai, UAE',
+          cityName: p.location || 'Dubai',
+          price: parseFloat(p.price || 0),
+          bedrooms: p.bedroom || 1,
+          bathrooms: p.bathroom || 1,
+          guests: p.guest || 2,
+          photos: (p.propertiesPhotos || []).map(ph => ph.image),
+          permitNumber: p.holidayHomePermitNumber || u.holidayHomePermitNumber || '—',
+          permitStatus: p.permitStatus || u.holidayHomePermitStatus || 'Not_Uploaded',
+          status: p.status ? p.status.toLowerCase() : 'active',
+        })),
         bookings: bookings.map(b => ({
           ...b,
           code: b.bookingNumber || b.id,
@@ -352,6 +391,23 @@ export const hostService = {
         id,
         status === "active" ? { status, verified: true } : { status },
       ),
+    ),
+  updateVerification: (id, verificationStatus, verificationNotes) =>
+    api.put('/admin/updateVerificationStatus', { id, verificationStatus, verificationNotes }, () =>
+      patchIn(db.hosts, id, {
+        verificationStatus,
+        verificationNotes,
+        verified: verificationStatus === 'Verified',
+        idDocument: `Emirates ID (${verificationStatus})`,
+      }),
+    ),
+  updatePayout: (id, payoutStatus) =>
+    api.put('/admin/updatePayoutStatus', { id, payoutStatus }, () =>
+      patchIn(db.hosts, id, { payoutStatus }),
+    ),
+  updatePermit: (id, permitStatus, propertyId) =>
+    api.put('/admin/updatePermitStatus', { id, permitStatus, propertyId }, () =>
+      patchIn(db.hosts, id, { holidayHomePermitStatus: permitStatus }),
     ),
   remove: (id) =>
     api.del(`/admin/deleteUser/${id}`, () => removeFrom(db.hosts, id)),
@@ -389,10 +445,17 @@ export const propertyService = {
             bathrooms: p.bathroom || 0,
             maxGuests: p.guest || 0,
             amenityIds: p.propertiesKeyAmenities ? p.propertiesKeyAmenities.map(a => String(a.amenitiesId)) : [],
-            animalIds: p.propertiesAnimals ? p.propertiesAnimals.map(a => String(a.animalId)) : [],
+            animalIds: p.propertiesAnimals
+              ? p.propertiesAnimals
+                  .map(a => String(a.animalId))
+                  .filter(id => id !== "0" && id !== "" && id !== "null")
+              : [],
+            propertiesAnimals: p.propertiesAnimals || [],
             houseRules: p.houseRules || { checkIn: "15:00", checkOut: "11:00", smoking: false, parties: false, pets: false },
             cancellationPolicyId: p.cancellationPolicyId || null,
-            petsAllowed: p.propertiesAnimals ? p.propertiesAnimals.length > 0 : false,
+            petsAllowed: p.propertiesAnimals
+              ? p.propertiesAnimals.some(a => Number(a.animalId) > 0)
+              : false,
             photos: p.propertiesPhotos?.map(img => {
               const url = img.image;
               if (!url) return "";
@@ -439,10 +502,42 @@ export const propertyService = {
             bathrooms: p.bathroom || 0,
             maxGuests: p.guest || 0,
             amenityIds: p.propertiesKeyAmenities ? p.propertiesKeyAmenities.map(a => Number(a.amenitiesId)) : [],
-            animalIds: p.propertiesAnimals ? p.propertiesAnimals.map(a => Number(a.animalId)) : [],
+            animalIds: p.propertiesAnimals
+              ? p.propertiesAnimals
+                  .map(a => Number(a.animalId))
+                  .filter(id => Number.isInteger(id) && id > 0)
+              : [],
+            propertiesAnimals: p.propertiesAnimals || [],
+            animals: p.propertiesAnimals
+              ? p.propertiesAnimals
+                  .map(a => a.friendlyAnimals || a.friendlyAnimal || a.animal)
+                  .filter(Boolean)
+                  .map(a => ({
+                    id: a.id,
+                    name: a.title || a.name,
+                    title: a.title || a.name,
+                    image: a.image,
+                  }))
+              : [],
+            propertiesKeyAmenities: p.propertiesKeyAmenities || [],
+            amenities: p.propertiesKeyAmenities
+              ? p.propertiesKeyAmenities
+                  .map(a => a.amenity)
+                  .filter(Boolean)
+                  .map(a => ({
+                    id: a.id,
+                    name: a.title,
+                    title: a.title,
+                    icon: a.icon,
+                    type: a.type || 'Essentials',
+                    status: a.status
+                  }))
+              : [],
             houseRules: p.houseRules || { checkIn: "15:00", checkOut: "11:00", smoking: false, parties: false, pets: false },
             cancellationPolicyId: p.cancellationPolicyId ? Number(p.cancellationPolicyId) : null,
-            petsAllowed: p.propertiesAnimals ? p.propertiesAnimals.length > 0 : false,
+            petsAllowed: p.propertiesAnimals
+              ? p.propertiesAnimals.some(a => Number(a.animalId) > 0)
+              : false,
             photos: p.propertiesPhotos?.map(img => {
               const url = img.image;
               if (!url) return "";
@@ -457,8 +552,25 @@ export const propertyService = {
       }
       return res;
     }),
-  create: (input) =>
-    api.post("/admin/properties", input, () => {
+  create: (input) => {
+    const payload = {
+      ...input,
+      basicInfo: input.name || input.basicInfo || "New Property",
+      propertyTypeId: input.propertyTypeId,
+      description: input.description,
+      location: input.area || input.address || input.cityName || "Dubai",
+      latitude: Number(input.lat) || 24.4539,
+      longitude: Number(input.lng) || 54.3773,
+      price: Number(input.pricePerNight || input.price) || 500,
+      bedroom: Number(input.bedrooms || input.bedroom) || 1,
+      bathroom: Number(input.bathrooms || input.bathroom) || 1,
+      guest: Number(input.maxGuests || input.guest) || 2,
+      keyAmenities: input.amenityIds || [],
+      photos: input.photos?.length ? input.photos : ["https://images.unsplash.com/photo-1512917774080-9991f1c4c750?q=80&w=2070&auto=format&fit=crop"],
+      animalIds: input.animalIds || [],
+      hostId: input.hostId,
+    };
+    return api.post("/admin/properties", payload, () => {
       const now = new Date().toISOString();
       const p = {
         ...input,
@@ -472,14 +584,37 @@ export const propertyService = {
       };
       db.properties.unshift(p);
       return p;
-    }),
-  update: (id, input) =>
-    api.patch(`/admin/properties/${id}`, input, () =>
+    }).then(res => {
+      if (res && res.success !== undefined) {
+        return res.body || res.data || res;
+      }
+      return res;
+    });
+  },
+  update: (id, input) => {
+    const payload = {
+      propertyId: Number(id),
+      ...input,
+      basicInfo: input.name || input.basicInfo,
+      price: input.pricePerNight !== undefined ? Number(input.pricePerNight) : undefined,
+      bedroom: input.bedrooms !== undefined ? Number(input.bedrooms) : undefined,
+      bathroom: input.bathrooms !== undefined ? Number(input.bathrooms) : undefined,
+      guest: input.maxGuests !== undefined ? Number(input.maxGuests) : undefined,
+      keyAmenities: input.amenityIds,
+      animalIds: input.animalIds,
+    };
+    return api.put(`/admin/properties/${id}`, payload, () =>
       patchIn(db.properties, id, {
         ...input,
         updatedAt: new Date().toISOString(),
       }),
-    ),
+    ).then(res => {
+      if (res && res.success !== undefined) {
+        return res.body || res.data || res;
+      }
+      return res;
+    });
+  },
   approve: (id) =>
     propertyService.update(id, { status: "live", rejectionReason: undefined }),
   reject: (id, reason) =>
@@ -621,7 +756,16 @@ const mapToFrontend = (path, item) => {
   if (path === "categories") {
     return { ...item, name: item.categoryName, active: item.status === 1 };
   }
-  if (["propertyTypes", "amenities", "friendlyAnimals"].includes(path)) {
+  if (path === "amenities") {
+    return {
+      ...item,
+      name: item.title || item.name,
+      type: item.type || item.group || "Essentials",
+      group: item.type || item.group || "Essentials",
+      active: item.status !== undefined ? item.status === "Active" : !!item.active,
+    };
+  }
+  if (["propertyTypes", "friendlyAnimals"].includes(path)) {
     return { ...item, name: item.title, active: item.status === "Active" };
   }
   return item;
@@ -632,7 +776,15 @@ const mapToBackend = (path, input) => {
   if (path === "categories") {
     return { ...input, categoryName: input.name, status: input.active ? 1 : 0 };
   }
-  if (["propertyTypes", "amenities", "friendlyAnimals"].includes(path)) {
+  if (path === "amenities") {
+    return {
+      ...input,
+      title: input.name || input.title,
+      type: input.type || input.group || "Essentials",
+      status: input.active ? "Active" : "Inactive",
+    };
+  }
+  if (["propertyTypes", "friendlyAnimals"].includes(path)) {
     return { ...input, title: input.name, status: input.active ? "Active" : "Inactive" };
   }
   return input;

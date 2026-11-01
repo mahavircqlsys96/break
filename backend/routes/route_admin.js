@@ -41,6 +41,9 @@ router.get('/userFollowing/:id', userController.userFollowing);
 router.get('/viewUser/:id/:role', userController.viewUser);
 router.put('/toggleUserStatus/:id', userController.toggleUserStatus);
 router.put('/updateApprovalStatus', userController.updateApprovalStatus);
+router.put('/updateVerificationStatus', userController.updateVerificationStatus);
+router.put('/updatePayoutStatus', userController.updatePayoutStatus);
+router.put('/updatePermitStatus', userController.updatePermitStatus);
 router.delete('/deleteUser/:id', userController.deleteUser);
 router.put('/restoreUser/:id', userController.restoreUser);
 
@@ -57,8 +60,10 @@ router.delete('/deleteContactUs/:id', contactUsController.delete_contactUs);
 
 // Properties
 router.get('/properties', propertiesController.getProperties);
+router.post('/properties', propertiesController.addProperties);
 router.get('/properties/:propertyTypeId', propertiesController.propertyDetail);
 router.put('/properties/:propertyTypeId', propertiesController.editProperties);
+router.delete('/properties/:propertyTypeId', propertiesController.deleteProperty);
 
 // Property Types
 router.get('/propertyTypes', propertyTypeController.list);

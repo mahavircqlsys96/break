@@ -24,6 +24,7 @@ import { hostService, propertyService } from "@/services";
 import { aed } from "@/lib/format";
 import { BackLink } from "../BackLink";
 import { useMasterData } from "../master-data/useMasterData";
+import { AmenitiesPicker } from "./AmenitiesPicker";
 
 const STEPS = [
   "Basic info",
@@ -390,39 +391,15 @@ export function PropertyFormPage() {
                   onChange={(n) => set("maxGuests", n)}
                 />
               </div>
-              <Field label="Key amenities">
-                <div className="flex flex-wrap gap-2">
-                  {md.amenities
-                    .filter((a) => a.active)
-                    .map((a) => (
-                      <Chip
-                        key={a.id}
-                        selected={form.amenityIds.includes(a.id)}
-                        onClick={() => toggleIn("amenityIds", a.id)}
-                        icon={<DynamicIcon name={a.icon} className="size-4" />}
-                      >
-                        {a.name}
-                      </Chip>
-                    ))}
-                </div>
-              </Field>
-              {form.propertyTypeId === "cat_farm" && (
-                <Field label="Farm animals">
-                  <div className="flex flex-wrap gap-2">
-                    {md.animals
-                      .filter((a) => a.active)
-                      .map((a) => (
-                        <Chip
-                          key={a.id}
-                          selected={form.animalIds.includes(a.id)}
-                          onClick={() => toggleIn("animalIds", a.id)}
-                        >
-                          {a.name}
-                        </Chip>
-                      ))}
-                  </div>
-                </Field>
-              )}
+              <AmenitiesPicker
+                selectedAmenityIds={form.amenityIds}
+                onChangeAmenities={(ids) => set("amenityIds", ids)}
+                selectedAnimalIds={form.animalIds}
+                onChangeAnimals={(ids) => set("animalIds", ids)}
+                amenities={md.amenities}
+                animals={md.animals}
+                propertyName={form.name || "Your listing"}
+              />
               <div className="grid grid-cols-2 gap-4">
                 <Field label="Check-in after">
                   <Input
@@ -617,10 +594,30 @@ export function PropertyFormPage() {
                     label: "Amenities",
                     value:
                       md.amenities
-                        .filter((a) => form.amenityIds.includes(a.id))
+                        .filter((a) =>
+                          form.amenityIds.some(
+                            (id) => String(id) === String(a.id)
+                          )
+                        )
                         .map((a) => a.name)
                         .join(", ") || "—",
                   },
+                  ...(form.animalIds?.length > 0
+                    ? [
+                        {
+                          label: "Farm animals",
+                          value:
+                            md.animals
+                              .filter((a) =>
+                                form.animalIds.some(
+                                  (id) => String(id) === String(a.id)
+                                )
+                              )
+                              .map((a) => a.name)
+                              .join(", ") || `${form.animalIds.length} animals`,
+                        },
+                      ]
+                    : []),
                   {
                     label: "Cancellation",
                     value:

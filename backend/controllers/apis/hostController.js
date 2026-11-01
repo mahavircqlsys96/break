@@ -539,4 +539,293 @@ module.exports = {
     }
   },
 
+  submitVerification: async (req, res) => {
+    try {
+      const v = new Validator(req.body, {
+        idDocumentType: 'required|in:Emirates ID,Passport,UAE Pass',
+      });
+      const errors = await helper.checkValidation(v);
+      if (errors) return helper.failed(res, errors);
+
+      const userId = req.auth.id;
+      const { idDocumentType, idDocumentNumber } = req.body;
+
+      let idDocumentFront = req.body.idDocumentFront || null;
+      let idDocumentBack = req.body.idDocumentBack || null;
+
+      if (req.files && req.files.idDocumentFront) {
+        idDocumentFront = await helper.fileUpload(req.files.idDocumentFront, 'verification');
+      }
+      if (req.files && req.files.idDocumentBack) {
+        idDocumentBack = await helper.fileUpload(req.files.idDocumentBack, 'verification');
+      }
+
+      let updateData = {
+        idDocumentType,
+        idDocumentNumber: idDocumentNumber || null,
+        idDocumentFront,
+        idDocumentBack,
+        verificationStatus: idDocumentType === 'UAE Pass' ? 'Verified' : 'Pending',
+        verificationNotes: null,
+      };
+
+      if (idDocumentType === 'UAE Pass') {
+        updateData.verifiedAt = new Date();
+        updateData.idDocumentNumber = idDocumentNumber || `UAE-PASS-${userId}`;
+      }
+
+      await users.update(updateData, { where: { id: userId } });
+
+      const updated = await users.findOne({
+        where: { id: userId },
+        attributes: [
+          'id',
+          'idDocumentType',
+          'idDocumentNumber',
+          'idDocumentFront',
+          'idDocumentBack',
+          'verificationStatus',
+          'verifiedAt'
+        ]
+      });
+
+      return helper.success(
+        res,
+        idDocumentType === 'UAE Pass' ? 'Identity verified with UAE Pass' : 'Identity verification submitted for review',
+        updated
+      );
+    } catch (error) {
+      console.log('submitVerification error:', error);
+      return helper.error(res, error);
+    }
+  },
+
+  submitPayoutAccount: async (req, res) => {
+    try {
+      const v = new Validator(req.body, {
+        accountHolderName: 'required|minLength:2|maxLength:100',
+        bankName: 'required|minLength:2|maxLength:100',
+        iban: 'required|minLength:15|maxLength:34',
+      });
+      const errors = await helper.checkValidation(v);
+      if (errors) return helper.failed(res, errors);
+
+      const userId = req.auth.id;
+      const { accountHolderName, bankName, iban, trn } = req.body;
+
+      // Clean and normalize IBAN
+      const cleanIban = String(iban).replace(/\s+/g, '').toUpperCase();
+      if (!cleanIban.startsWith('AE')) {
+        return helper.failed(res, 'UAE IBAN must begin with AE');
+      }
+
+      const updateData = {
+        accountHolderName,
+        bankName,
+        iban: cleanIban,
+        trn: trn || null,
+        payoutStatus: 'Pending',
+      };
+
+      await users.update(updateData, { where: { id: userId } });
+
+      return helper.success(res, 'Payout account details submitted successfully', {
+        accountHolderName,
+        bankName,
+        iban: cleanIban,
+        trn: trn || null,
+        payoutStatus: 'Pending',
+      });
+    } catch (error) {
+      console.log('submitPayoutAccount error:', error);
+      return helper.error(res, error);
+    }
+  },
+
+  submitHolidayHomePermit: async (req, res) => {
+    try {
+      const v = new Validator(req.body, {
+        holidayHomePermitNumber: 'required|minLength:3|maxLength:50',
+      });
+      const errors = await helper.checkValidation(v);
+      if (errors) return helper.failed(res, errors);
+
+      const userId = req.auth.id;
+      const { holidayHomePermitNumber, holidayHomePermitExpiry, propertyId } = req.body;
+
+      let holidayHomePermitDoc = req.body.holidayHomePermitDoc || null;
+      if (req.files && req.files.permitDoc) {
+        holidayHomePermitDoc = await helper.fileUpload(req.files.permitDoc, 'permits');
+      }
+
+      await users.update({
+        holidayHomePermitNumber,
+        holidayHomePermitDoc,
+        holidayHomePermitExpiry: holidayHomePermitExpiry || null,
+        holidayHomePermitStatus: 'Pending',
+      }, { where: { id: userId } });
+
+      if (propertyId) {
+        await properties.update({
+          holidayHomePermitNumber,
+          holidayHomePermitDoc,
+          permitStatus: 'Pending',
+        }, { where: { id: propertyId, hostId: userId } });
+      }
+
+      return helper.success(res, 'Holiday home permit submitted for review', {
+        holidayHomePermitNumber,
+        holidayHomePermitDoc,
+        holidayHomePermitStatus: 'Pending',
+      });
+    } catch (error) {
+      console.log('submitHolidayHomePermit error:', error);
+      return helper.error(res, error);
+    }
+  },
+
+  getOnboardingProgress: async (req, res) => {
+    try {
+      const userId = req.auth.id;
+      const user = await users.findOne({ where: { id: userId } });
+      if (!user) return helper.failed(res, 'User not found');
+
+      const hostProps = await properties.findAll({
+        where: { hostId: userId, deletedAt: null },
+      });
+
+      const hasListing = hostProps.length > 0;
+      const hasActiveListing = hostProps.some(p => p.status === 'Active');
+      const isIdentityVerified = user.verificationStatus === 'Verified';
+      const isPayoutAdded = user.payoutStatus === 'Verified' || (user.payoutStatus === 'Pending' && !!user.iban);
+      const isPermitUploaded = user.holidayHomePermitStatus === 'Approved' || (user.holidayHomePermitStatus === 'Pending' && !!user.holidayHomePermitNumber);
+      const hasPricedProperty = hostProps.some(p => parseFloat(p.price) > 0);
+      const hasCalendarSet = hasListing;
+
+      const steps = [
+        {
+          step: 1,
+          key: 'listing',
+          title: 'Listing',
+          description: hasActiveListing ? 'Listing approved & active' : (hasListing ? 'In review - usually within 2 working days' : 'Create your first listing'),
+          status: hasActiveListing ? 'approved' : (hasListing ? 'in_review' : 'pending'),
+          completed: hasActiveListing || hasListing,
+          required: false,
+        },
+        {
+          step: 2,
+          key: 'identity',
+          title: 'Verify your identity',
+          description: user.idDocumentType ? `${user.idDocumentType} (${user.verificationStatus})` : 'Emirates ID or passport',
+          status: user.verificationStatus,
+          documentType: user.idDocumentType,
+          completed: isIdentityVerified,
+          required: true,
+        },
+        {
+          step: 3,
+          key: 'payout',
+          title: 'Add payout account',
+          description: user.bankName ? `${user.bankName} (${user.payoutStatus})` : 'Where we send your earnings',
+          status: user.payoutStatus,
+          bankName: user.bankName,
+          completed: isPayoutAdded,
+          required: true,
+        },
+        {
+          step: 4,
+          key: 'permit',
+          title: 'Upload holiday home permit',
+          description: user.holidayHomePermitNumber ? `Permit #${user.holidayHomePermitNumber}` : 'Needed to keep your listing live',
+          status: user.holidayHomePermitStatus,
+          permitNumber: user.holidayHomePermitNumber,
+          completed: isPermitUploaded,
+          required: true,
+        },
+        {
+          step: 5,
+          key: 'pricing',
+          title: 'Pricing',
+          description: hasPricedProperty ? 'Nightly price configured' : 'Set your nightly price',
+          status: hasPricedProperty ? 'completed' : 'pending',
+          completed: hasPricedProperty,
+          required: true,
+        },
+        {
+          step: 6,
+          key: 'calendar',
+          title: 'Calendar & check-in',
+          description: hasCalendarSet ? 'Availability and arrival guide configured' : 'Availability and arrival guide',
+          status: hasCalendarSet ? 'completed' : 'pending',
+          completed: hasCalendarSet,
+          required: true,
+        },
+      ];
+
+      const completedCount = steps.filter(s => s.completed).length;
+
+      return helper.success(res, 'Host onboarding progress fetched', {
+        completedCount,
+        totalCount: 6,
+        progressLabel: `${completedCount} of 6 done`,
+        summaryText: completedCount === 6 ? 'All steps completed! You are ready to host.' : 'Complete the required steps to receive payouts.',
+        canReceivePayouts: isIdentityVerified && isPayoutAdded,
+        canAcceptBookings: hasActiveListing && hasPricedProperty,
+        steps,
+      });
+    } catch (error) {
+      console.log('getOnboardingProgress error:', error);
+      return helper.error(res, error);
+    }
+  },
+
+  getUaeBanks: async (req, res) => {
+    try {
+      const banks = [
+        { id: 'enbd', name: 'Emirates NBD', code: 'EBI' },
+        { id: 'adcb', name: 'Abu Dhabi Commercial Bank (ADCB)', code: 'ADC' },
+        { id: 'fab', name: 'First Abu Dhabi Bank (FAB)', code: 'FGB' },
+        { id: 'dib', name: 'Dubai Islamic Bank (DIB)', code: 'DUI' },
+        { id: 'mashreq', name: 'Mashreq Bank', code: 'MSQ' },
+        { id: 'adib', name: 'Abu Dhabi Islamic Bank (ADIB)', code: 'ADI' },
+        { id: 'rakbank', name: 'RAKBANK (National Bank of Ras Al-Khaimah)', code: 'RAK' },
+        { id: 'cbd', name: 'Commercial Bank of Dubai (CBD)', code: 'CBD' },
+        { id: 'ei', name: 'Emirates Islamic', code: 'EIB' },
+        { id: 'sib', name: 'Sharjah Islamic Bank', code: 'NBS' }
+      ];
+      return helper.success(res, 'UAE Banks list', banks);
+    } catch (error) {
+      return helper.error(res, error);
+    }
+  },
+
+  getHostSupport: async (req, res) => {
+    try {
+      const support = {
+        title: 'Host support',
+        searchPlaceholder: 'Search help for hosts',
+        categories: [
+          { id: 'bookings', title: 'Bookings & guests', icon: 'calendar' },
+          { id: 'payouts', title: 'Payouts & fees', icon: 'credit-card' },
+          { id: 'listings', title: 'Listing & calendar', icon: 'layout-grid' },
+          { id: 'safety', title: 'Safety & incidents', icon: 'shield-check' },
+        ],
+        reportGuest: {
+          title: 'Report a guest',
+          subtitle: 'Damage, rule-breaking or safety issues'
+        },
+        contact: {
+          title: 'Talk to the host team',
+          hours: '24/7 in English and Arabic',
+          phone: '+971 4 800 27325',
+          email: 'support@break.ae',
+          chatAvailable: true,
+        }
+      };
+      return helper.success(res, 'Host support information', support);
+    } catch (error) {
+      return helper.error(res, error);
+    }
+  },
+
 };

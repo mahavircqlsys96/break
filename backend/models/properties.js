@@ -67,6 +67,19 @@ module.exports = function(sequelize, DataTypes) {
       type: DataTypes.ENUM('Active','Inactive'),
       allowNull: false,
       defaultValue: "Active"
+    },
+    holidayHomePermitNumber: {
+      type: DataTypes.STRING(100),
+      allowNull: true
+    },
+    holidayHomePermitDoc: {
+      type: DataTypes.STRING(500),
+      allowNull: true
+    },
+    permitStatus: {
+      type: DataTypes.ENUM('Not_Uploaded', 'Pending', 'Approved', 'Rejected'),
+      allowNull: false,
+      defaultValue: 'Not_Uploaded'
     }
   }, {
     sequelize,

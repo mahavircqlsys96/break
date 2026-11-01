@@ -12,10 +12,12 @@ module.exports = {
       const offset = (page - 1) * limit;
       const search = req.query.search || '';
       const status = req.query.status;
+      const type = req.query.type;
 
       let whereClause = {};
       if (search) whereClause.title = { [Op.like]: `%${search}%` };
       if (status !== undefined) whereClause.status = status;
+      if (type && type !== 'All') whereClause.type = type;
 
       const { count, rows } = await amenities.findAndCountAll({
         where: whereClause,
@@ -53,6 +55,7 @@ module.exports = {
 
       const item = await amenities.create({
         title: req.body.title,
+        type: req.body.type || 'Essentials',
         icon,
         status: req.body.status || 'Active',
       });
@@ -72,6 +75,7 @@ module.exports = {
 
       const updateData = {};
       if (req.body.title) updateData.title = req.body.title;
+      if (req.body.type !== undefined) updateData.type = req.body.type;
       if (req.body.status !== undefined) updateData.status = req.body.status;
       
       if (req.files && req.files.image) {

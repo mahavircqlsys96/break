@@ -353,33 +353,35 @@ module.exports = {
       // --------------------------------------------------
       // Parse Animals
       // --------------------------------------------------
-      let animalIds;
+      let animalIds = [];
 
-      try {
-        animalIds = Array.isArray(req.body.animalIds)
-          ? req.body.animalIds
-          : JSON.parse(req.body.animalIds);
-      } catch (parseError) {
-        return helper.failed(
-          res,
-          "animalIds must be a valid array."
-        );
+      if (req.body.animalIds !== undefined && req.body.animalIds !== null && req.body.animalIds !== "") {
+        try {
+          animalIds = Array.isArray(req.body.animalIds)
+            ? req.body.animalIds
+            : JSON.parse(req.body.animalIds);
+        } catch (parseError) {
+          return helper.failed(
+            res,
+            "animalIds must be a valid array."
+          );
+        }
+
+        if (!Array.isArray(animalIds)) {
+          return helper.failed(
+            res,
+            "animalIds must be an array."
+          );
+        }
+
+        animalIds = [
+          ...new Set(
+            animalIds
+              .map((id) => Number(id))
+              .filter((id) => Number.isInteger(id) && id > 0)
+          ),
+        ];
       }
-
-      if (!Array.isArray(animalIds)) {
-        return helper.failed(
-          res,
-          "animalIds must be an array."
-        );
-      }
-
-      animalIds = [
-        ...new Set(
-          animalIds
-            .map((id) => Number(id))
-            .filter((id) => Number.isInteger(id) && id > 0)
-        ),
-      ];
 
       // --------------------------------------------------
       // Check Property Type
@@ -411,7 +413,7 @@ module.exports = {
         // ------------------------------------------------
         property = await properties.create(
           {
-            hostId: user.id,
+            hostId: req.body.hostId ? Number(req.body.hostId) : (user ? user.id : 1),
             basicInfo: String(req.body.basicInfo).trim(),
             propertyTypeId: Number(req.body.propertyTypeId),
             description: String(req.body.description).trim(),
@@ -620,6 +622,7 @@ module.exports = {
                     "id",
                     "title",
                     "icon",
+                    "type",
                     "status",
                   ],
                   required: false,
@@ -688,22 +691,21 @@ module.exports = {
   },
   propertyDetail: async (req, res) => {
     try {
-      const { propertyTypeId } = req.params;
+      const propertyId =
+        req.params.propertyId ||
+        req.params.propertyTypeId ||
+        req.params.id;
 
-      const v = new Validator(req.params, {
-        propertyTypeId: "required|integer",
-      });
-
-      const errors = await helper.checkValidation(v);
-
-      if (errors) {
-        return helper.failed(res, errors);
+      if (!propertyId || isNaN(propertyId)) {
+        return helper.failed(
+          res,
+          "Property id is required and must be an integer."
+        );
       }
-
 
       const propertyDetail = await properties.findOne({
         where: {
-          id: propertyTypeId,
+          id: Number(propertyId),
           deletedAt: null,
         },
 
@@ -833,6 +835,7 @@ module.exports = {
                   "id",
                   "title",
                   "icon",
+                  "type",
                   "status",
                 ],
                 required: false,
@@ -1060,6 +1063,17 @@ module.exports = {
     try {
       console.log("EDIT PROPERTY REQUEST:", req.body);
 
+      // Support propertyId from params if not in body
+      if (!req.body.propertyId) {
+        const idFromParam =
+          req.params.propertyTypeId ||
+          req.params.propertyId ||
+          req.params.id;
+        if (idFromParam) {
+          req.body.propertyId = Number(idFromParam);
+        }
+      }
+
       const v = new Validator(req.body, {
         propertyId: "required|integer",
       });
@@ -1216,11 +1230,19 @@ module.exports = {
             transaction: t,
           });
 
-          if (animalIds.length > 0) {
+          const validAnimalIds = [
+            ...new Set(
+              animalIds
+                .map((id) => Number(id))
+                .filter((id) => Number.isInteger(id) && id > 0)
+            ),
+          ];
+
+          if (validAnimalIds.length > 0) {
             await propertiesAnimals.bulkCreate(
-              animalIds.map((animalId) => ({
+              validAnimalIds.map((animalId) => ({
                 propertyId: propertyId,
-                animalId: Number(animalId),
+                animalId: animalId,
               })),
               {
                 transaction: t,

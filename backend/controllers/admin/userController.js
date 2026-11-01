@@ -1,5 +1,5 @@
 require('dotenv').config();
-const { users, bookings, followers } = require('../../models');
+const { users, bookings, followers, properties, propertiesPhotos } = require('../../models');
 const db = require("../../models");
 const sequelize = db.sequelize;
 const Sequelize = require("sequelize");
@@ -82,6 +82,7 @@ module.exports = {
             const limit = parseInt(req.query.limit) || 10;
             const search = req.query.search || '';
             const status = req.query.status || '';
+            const verificationStatus = req.query.verificationStatus || '';
             const offset = (page - 1) * limit;
 
             let whereClause = {
@@ -91,6 +92,10 @@ module.exports = {
 
             if (status && status !== 'all') {
                 whereClause.status = status;
+            }
+
+            if (verificationStatus && verificationStatus !== 'all') {
+                whereClause.verificationStatus = verificationStatus;
             }
 
             if (search) {
@@ -118,17 +123,57 @@ module.exports = {
                 order: [['createdAt', 'DESC']],
             });
 
-            console.log("USERLIST2 DEBUG:", { whereClause, count, limit, offset, search, status, page });
+            const hostIds = user_list.map((u) => u.id);
+            let propMap = {};
+            let bookingMap = {};
+            let earningsMap = {};
+
+            if (hostIds.length > 0) {
+                const propCounts = await properties.findAll({
+                    attributes: ['hostId', [fn('COUNT', col('id')), 'cnt']],
+                    where: { hostId: { [Op.in]: hostIds }, deletedAt: null },
+                    group: ['hostId'],
+                    raw: true,
+                });
+                propMap = Object.fromEntries(propCounts.map((p) => [String(p.hostId), parseInt(p.cnt, 10)]));
+
+                const bookingCounts = await bookings.findAll({
+                    attributes: ['property.hostId', [fn('COUNT', col('bookings.id')), 'cnt'], [fn('SUM', col('bookings.amount')), 'total']],
+                    include: [
+                        {
+                            model: properties,
+                            as: 'property',
+                            attributes: ['hostId'],
+                            where: { hostId: { [Op.in]: hostIds } },
+                        },
+                    ],
+                    group: ['property.hostId'],
+                    raw: true,
+                });
+                for (const b of bookingCounts) {
+                    const hid = String(b.hostId || b['property.hostId']);
+                    bookingMap[hid] = parseInt(b.cnt, 10) || 0;
+                    earningsMap[hid] = parseFloat(b.total, 10) || 0;
+                }
+            }
+
+            const enrichedList = user_list.map((u) => {
+                const j = u.toJSON ? u.toJSON() : u;
+                j.total_properties = propMap[String(u.id)] || 0;
+                j.total_bookings = bookingMap[String(u.id)] || 0;
+                j.total_earnings = earningsMap[String(u.id)] || 0;
+                return j;
+            });
 
             return helper.success(res, 'user list fetched', {
-                user_list,
+                user_list: enrichedList,
                 total: count,
                 currentPage: page,
                 totalPages: Math.ceil(count / limit)
             });
         } catch (error) {
-            console.log(error)
-            return helper.failed(res, 'Something went wrong')
+            console.log(error);
+            return helper.failed(res, 'Something went wrong');
         }
     },
     userListDeleted: async (req, res) => {
@@ -212,6 +257,39 @@ module.exports = {
 
             const row = user_details.toJSON ? user_details.toJSON() : user_details;
             row.total_spent = parseFloat(totalSpentResult?.totalSpent || 0);
+
+            if (row.role === 'Host') {
+                const hostProps = await properties.findAll({
+                    where: { hostId: id, deletedAt: null },
+                    include: [
+                        {
+                            model: propertiesPhotos,
+                            as: 'propertiesPhotos',
+                            attributes: ['id', 'image'],
+                            required: false,
+                        },
+                    ],
+                    order: [['createdAt', 'DESC']],
+                });
+                row.properties = hostProps;
+                row.total_properties = hostProps.length;
+
+                const hostBookings = await bookings.findAll({
+                    include: [
+                        {
+                            model: properties,
+                            as: 'property',
+                            where: { hostId: id },
+                            attributes: ['id', 'hostId'],
+                        },
+                    ],
+                    attributes: ['id', 'amount', 'status'],
+                });
+                row.total_bookings = hostBookings.length;
+                row.total_earnings = hostBookings
+                    .filter((b) => ['Confirmed', 'Completed'].includes(b.status))
+                    .reduce((sum, b) => sum + parseFloat(b.amount || 0), 0);
+            }
 
             return helper.success(res, "user view", row);
 
@@ -333,14 +411,81 @@ module.exports = {
 
             await user_exists.update(updateData);
 
-
-            // await user_exists.update({ account_status });
-
-
             return helper.success(res, "status toggled")
         } catch (error) {
             console.log(error)
             return helper.failed(res, 'Something went wrong')
+        }
+    },
+    updateVerificationStatus: async (req, res) => {
+        try {
+            const { id, verificationStatus, verificationNotes } = req.body;
+            if (!id || !verificationStatus) {
+                return helper.failed(res, 'Host ID and verificationStatus are required');
+            }
+            const host = await users.findOne({ where: { id } });
+            if (!host) {
+                return helper.failed(res, 'Host not found');
+            }
+
+            const updateData = {
+                verificationStatus,
+                verificationNotes: verificationStatus === 'Rejected' ? (verificationNotes || 'Document verification failed.') : null,
+            };
+            if (verificationStatus === 'Verified') {
+                updateData.verifiedAt = new Date();
+                if (host.status === 'Inactive' || host.status === 'Pending') {
+                    updateData.status = 'Active';
+                }
+            }
+
+            await host.update(updateData);
+            return helper.success(res, `Host identity verification status updated to ${verificationStatus}`, host);
+        } catch (error) {
+            console.log(error);
+            return helper.failed(res, 'Something went wrong');
+        }
+    },
+    updatePayoutStatus: async (req, res) => {
+        try {
+            const { id, payoutStatus } = req.body;
+            if (!id || !payoutStatus) {
+                return helper.failed(res, 'Host ID and payoutStatus are required');
+            }
+            const host = await users.findOne({ where: { id } });
+            if (!host) {
+                return helper.failed(res, 'Host not found');
+            }
+
+            await host.update({ payoutStatus });
+            return helper.success(res, `Host payout account status updated to ${payoutStatus}`, host);
+        } catch (error) {
+            console.log(error);
+            return helper.failed(res, 'Something went wrong');
+        }
+    },
+    updatePermitStatus: async (req, res) => {
+        try {
+            const { id, propertyId, permitStatus } = req.body;
+            if (!id && !propertyId) {
+                return helper.failed(res, 'Host ID or Property ID is required');
+            }
+            if (propertyId) {
+                const prop = await properties.findOne({ where: { id: propertyId } });
+                if (prop) {
+                    await prop.update({ permitStatus });
+                }
+            }
+            if (id) {
+                const host = await users.findOne({ where: { id } });
+                if (host) {
+                    await host.update({ holidayHomePermitStatus: permitStatus });
+                }
+            }
+            return helper.success(res, `Holiday home permit status updated to ${permitStatus}`);
+        } catch (error) {
+            console.log(error);
+            return helper.failed(res, 'Something went wrong');
         }
     },
     generateUserQR: async (req, res) => {

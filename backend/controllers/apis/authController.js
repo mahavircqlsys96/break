@@ -417,6 +417,40 @@ module.exports = {
     }
   },
 
+  getAmenities: async (req, res) => {
+    try {
+      const { type } = req.query;
+      const whereClause = { status: "Active" };
+      if (type && type !== 'All') whereClause.type = type;
+
+      const list = await amenities.findAll({
+        where: whereClause,
+        attributes: ["id", "title", "icon", "type"],
+        order: [["type", "ASC"], ["title", "ASC"]],
+      });
+
+      return helper.success(res, "Amenities fetched successfully", list);
+    } catch (err) {
+      console.log(err);
+      return helper.error(res, err);
+    }
+  },
+
+  getAnimals: async (req, res) => {
+    try {
+      const list = await friendlyAnimals.findAll({
+        where: { status: "Active" },
+        attributes: ["id", "title", "icon"],
+        order: [["title", "ASC"]],
+      });
+
+      return helper.success(res, "Friendly animals fetched successfully", list);
+    } catch (err) {
+      console.log(err);
+      return helper.error(res, err);
+    }
+  },
+
 
   logout: async (req, res) => {
     try {

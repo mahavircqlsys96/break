@@ -38,6 +38,7 @@ import { aed, ago, date } from "@/lib/format";
 import { BackLink } from "../BackLink";
 import { BookingsTable } from "../BookingsTable";
 import { useMasterData } from "../master-data/useMasterData";
+import { ANIMAL_AVATARS } from "./AmenitiesPicker";
 
 export function PropertyDetailPage() {
   const { id = "" } = useParams();
@@ -80,8 +81,71 @@ export function PropertyDetailPage() {
 
   if (isLoading || !data) return <PageLoader />;
   const { property: p, host, reviews } = data;
-  const amenities = md.amenities.filter((a) => p.amenityIds.includes(a.id));
-  const animals = md.animals.filter((a) => p.animalIds.includes(a.id));
+
+  // Extract amenities directly from propertiesKeyAmenities
+  const keyAmenitiesList = (p.propertiesKeyAmenities || [])
+    .map((item) => {
+      const a =
+        item.amenity ||
+        md.amenities.find((m) => String(m.id) === String(item.amenitiesId));
+      if (!a) return null;
+      return {
+        id: a.id || item.amenitiesId,
+        name: a.title || a.name,
+        title: a.title || a.name,
+        icon: a.icon,
+        type: a.type || a.group || "Essentials",
+        status: a.status,
+      };
+    })
+    .filter(Boolean);
+
+  const amenities =
+    keyAmenitiesList.length > 0
+      ? keyAmenitiesList
+      : md.amenities
+          .filter((a) =>
+            (p.amenityIds || []).some((id) => String(id) === String(a.id))
+          )
+          .map((a) => ({
+            ...a,
+            name: a.name || a.title,
+            title: a.title || a.name,
+            type: a.type || a.group || "Essentials",
+          }));
+
+  // Extract animals directly from propertiesAnimals or p.animals, with md.animals fallback
+  const propertyAnimalsList = (p.propertiesAnimals || [])
+    .map((item) => {
+      const a =
+        item.friendlyAnimals ||
+        item.friendlyAnimal ||
+        item.animal ||
+        md.animals.find((m) => String(m.id) === String(item.animalId));
+      if (!a) return null;
+      return {
+        id: a.id || item.animalId,
+        name: a.title || a.name,
+        title: a.title || a.name,
+        image: a.image,
+      };
+    })
+    .filter(Boolean);
+
+  const animals =
+    propertyAnimalsList.length > 0
+      ? propertyAnimalsList
+      : (p.animals && p.animals.length > 0)
+      ? p.animals
+      : md.animals
+          .filter((a) =>
+            (p.animalIds || []).some((id) => String(id) === String(a.id))
+          )
+          .map((a) => ({
+            ...a,
+            name: a.title || a.name,
+            title: a.title || a.name,
+          }));
   const policy = md.policies.find((c) => c.id === p.cancellationPolicyId);
 
   return (
@@ -231,30 +295,107 @@ export function PropertyDetailPage() {
           </Card>
 
           <Card title="What this place offers">
-            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
-              {amenities.map((a) => (
-                <div
-                  key={a.id}
-                  className="flex items-center gap-2.5 rounded-xl border border-line/70 px-3 py-2.5 text-[13px] font-medium"
-                >
-                  <DynamicIcon name={a.icon} className="size-4 text-accent" />
-                  {a.name}
-                </div>
-              ))}
-            </div>
-            {animals.length > 0 && (
-              <>
-                <h4 className="mb-2 mt-5 text-[13px] font-bold">
-                  Farm animals
-                </h4>
-                <div className="flex flex-wrap gap-2">
-                  {animals.map((a) => (
-                    <Badge key={a.id} tone="accent">
-                      {a.name}
-                    </Badge>
-                  ))}
-                </div>
-              </>
+            {amenities.length === 0 && animals.length === 0 ? (
+              <p className="text-xs text-ink-muted">No amenities or animals selected.</p>
+            ) : (
+              <div className="space-y-4">
+                {Object.entries(
+                  amenities.reduce((acc, a) => {
+                    const type = a.type || a.group || "Essentials";
+                    if (!acc[type]) acc[type] = [];
+                    acc[type].push(a);
+                    return acc;
+                  }, {})
+                ).map(([catName, items]) => (
+                  <div key={catName} className="rounded-2xl border border-line/60 bg-canvas-soft/30 p-4">
+                    <div className="mb-3 flex items-center justify-between border-b border-line/40 pb-2">
+                      <div className="flex items-center gap-2">
+                        <span className="font-display text-sm font-bold text-ink">
+                          {catName}
+                        </span>
+                        <span className="text-xs text-ink-muted">
+                          ({items.length})
+                        </span>
+                      </div>
+                      <Badge tone="accent">{catName}</Badge>
+                    </div>
+                    <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 md:grid-cols-3">
+                      {items.map((a) => (
+                        <div
+                          key={a.id}
+                          className="flex items-center justify-between gap-2.5 rounded-xl border border-line/70 bg-surface px-3 py-2.5 text-[13px] font-medium shadow-xs"
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-accent-soft text-primary">
+                              <DynamicIcon name={a.icon} className="size-4" />
+                            </span>
+                            <span className="font-semibold text-ink truncate">{a.name || a.title}</span>
+                          </div>
+                          <span className="rounded-md bg-canvas-soft px-1.5 py-0.5 text-[10px] font-medium text-ink-muted shrink-0">
+                            {a.type || catName}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+
+                {animals.length > 0 && (
+                  <div className="rounded-2xl border border-line/60 bg-canvas-soft/30 p-4">
+                    <div className="mb-3 flex items-center justify-between border-b border-line/40 pb-2">
+                      <div className="flex items-center gap-2">
+                        <span className="font-display text-sm font-bold text-ink">
+                          Farm animals
+                        </span>
+                        <span className="text-xs text-ink-muted">
+                          ({animals.length})
+                        </span>
+                      </div>
+                      <Badge tone="accent">Farm & animals</Badge>
+                    </div>
+                    <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 md:grid-cols-3">
+                      {animals.map((a) => {
+                        const animalName = a.name || a.title || "Animal";
+                        const avatar =
+                          ANIMAL_AVATARS[animalName] ||
+                          (a.image?.startsWith("http")
+                            ? a.image
+                            : a.image
+                            ? `${import.meta.env.VITE_IMAGE_BASE || ""}${a.image.startsWith("/") ? a.image.substring(1) : a.image}`
+                            : "https://images.unsplash.com/photo-1553284965-83fd3e82fa5a?w=150&auto=format&fit=crop&q=80");
+
+                        return (
+                          <div
+                            key={a.id}
+                            className="flex items-center justify-between gap-2.5 rounded-xl border border-line/70 bg-surface px-3 py-2.5 text-[13px] font-medium shadow-xs"
+                          >
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <img
+                                src={avatar}
+                                alt={animalName}
+                                className="size-8 rounded-full object-cover border border-line shrink-0"
+                                onError={(e) => {
+                                  if (ANIMAL_AVATARS[animalName] && e.currentTarget.src !== ANIMAL_AVATARS[animalName]) {
+                                    e.currentTarget.src = ANIMAL_AVATARS[animalName];
+                                  } else {
+                                    e.currentTarget.style.display = "none";
+                                  }
+                                }}
+                              />
+                              <span className="font-semibold text-ink truncate">
+                                {animalName}
+                              </span>
+                            </div>
+                            <span className="rounded-md bg-canvas-soft px-1.5 py-0.5 text-[10px] font-medium text-ink-muted shrink-0">
+                              Friendly animal
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
           </Card>
 

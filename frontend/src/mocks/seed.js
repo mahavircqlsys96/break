@@ -463,6 +463,9 @@ export const guests = Array.from({ length: 64 }, (_, i) => {
 export const hosts = Array.from({ length: 18 }, (_, i) => {
   const p = person();
   const status = i < 14 ? "active" : i < 16 ? "pending" : "suspended";
+  const docType = i % 3 === 0 ? "Emirates ID" : i % 3 === 1 ? "Passport" : "UAE Pass";
+  const verifStatus = status === "active" ? "Verified" : status === "pending" ? "Pending" : "Rejected";
+  const banks = ["Emirates NBD", "Abu Dhabi Commercial Bank (ADCB)", "First Abu Dhabi Bank (FAB)", "Dubai Islamic Bank (DIB)"];
   return {
     id: `h_${pad(i + 1)}`,
     ...p,
@@ -470,11 +473,23 @@ export const hosts = Array.from({ length: 18 }, (_, i) => {
     phone: phone(),
     country: "United Arab Emirates",
     status,
-    verified: status === "active",
-    idDocument:
-      status === "pending"
-        ? "Emirates ID uploaded — awaiting review"
-        : "Emirates ID verified",
+    verified: verifStatus === "Verified",
+    verificationStatus: verifStatus,
+    idDocumentType: docType,
+    idDocumentNumber: docType === "Emirates ID" ? `784-198${i % 10}-${1000000 + i * 37}-1` : docType === "Passport" ? `P${10000000 + i * 943}` : `UAE-PASS-${pad(i + 1)}`,
+    idDocumentFront: "https://images.unsplash.com/photo-1607344645866-009c320c5ab8?w=800&auto=format&fit=crop&q=80",
+    idDocumentBack: docType === "Emirates ID" ? "https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=800&auto=format&fit=crop&q=80" : null,
+    verificationNotes: status === "suspended" ? "Identity document photo is expired or illegible. Please submit a valid renewed document." : null,
+    verifiedAt: status === "active" ? daysAgo(int(10, 200)) : null,
+    accountHolderName: p.name,
+    bankName: banks[i % banks.length],
+    iban: `AE07 0331 ${pad(i + 1, 4)} 6789 0123 456`,
+    trn: i % 2 === 0 ? `10023456780000${i % 10}` : null,
+    payoutStatus: status === "active" ? "Verified" : status === "pending" ? "Pending" : "Not_Added",
+    holidayHomePermitNumber: `DTCM-HHP-${10000 + i * 17}`,
+    holidayHomePermitDoc: "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=800&auto=format&fit=crop&q=80",
+    holidayHomePermitStatus: status === "active" ? "Approved" : status === "pending" ? "Pending" : "Not_Uploaded",
+    idDocument: `${docType} (${verifStatus})`,
     joinedAt: daysAgo(int(30, 500)),
     properties: 0,
     bookings: 0,

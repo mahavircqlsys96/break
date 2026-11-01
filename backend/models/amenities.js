@@ -15,6 +15,11 @@ module.exports = function(sequelize, DataTypes) {
       type: DataTypes.STRING(500),
       allowNull: true
     },
+    type: {
+      type: DataTypes.STRING(100),
+      allowNull: true,
+      defaultValue: "Essentials"
+    },
     status: {
       type: DataTypes.ENUM('Active','Inactive'),
       allowNull: false,
@@ -32,6 +37,13 @@ module.exports = function(sequelize, DataTypes) {
         using: "BTREE",
         fields: [
           { name: "id" },
+        ]
+      },
+      {
+        name: "idx_amenities_type",
+        using: "BTREE",
+        fields: [
+          { name: "type" },
         ]
       },
       {

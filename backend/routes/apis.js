@@ -44,11 +44,19 @@ module.exports = (io) => {
   router.put('/setAccountType', authController.setAccountType);
   router.put('/updatePermissions', authController.updatePermissions);
   router.get('/getPropertyTypes', authController.getPropertyTypes);
+  router.get('/getAmenities', authController.getAmenities);
+  router.get('/getAnimals', authController.getAnimals);
   router.post('/contactUs', authController.contactUs);
   router.get('/notificationList', authController.notificationList);
   router.delete('/clearNotification', authController.clearNotification);
 
   router.get('/hostHome', hostController.hostHome);
+  router.post('/host/submitVerification', hostController.submitVerification);
+  router.post('/host/submitPayoutAccount', hostController.submitPayoutAccount);
+  router.post('/host/submitHolidayHomePermit', hostController.submitHolidayHomePermit);
+  router.get('/host/onboardingProgress', hostController.getOnboardingProgress);
+  router.get('/host/uaeBanks', hostController.getUaeBanks);
+  router.get('/host/support', hostController.getHostSupport);
 
   ///properites///
   router.post('/addProperties', propertiesController.addProperties);

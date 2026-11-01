@@ -112,6 +112,73 @@ module.exports = function (sequelize, DataTypes) {
       type: DataTypes.ENUM('pending', 'profile', 'permissions', 'accountType', 'done'),
       allowNull: false, defaultValue: 'pending'
     },
+    idDocumentType: {
+      type: DataTypes.ENUM('Emirates ID', 'Passport', 'UAE Pass'),
+      allowNull: true
+    },
+    idDocumentNumber: {
+      type: DataTypes.STRING(100),
+      allowNull: true
+    },
+    idDocumentFront: {
+      type: DataTypes.STRING(500),
+      allowNull: true
+    },
+    idDocumentBack: {
+      type: DataTypes.STRING(500),
+      allowNull: true
+    },
+    verificationStatus: {
+      type: DataTypes.ENUM('Unverified', 'Pending', 'Verified', 'Rejected'),
+      allowNull: false,
+      defaultValue: 'Unverified'
+    },
+    verificationNotes: {
+      type: DataTypes.TEXT,
+      allowNull: true
+    },
+    verifiedAt: {
+      type: DataTypes.DATE,
+      allowNull: true
+    },
+    holidayHomePermitDoc: {
+      type: DataTypes.STRING(500),
+      allowNull: true
+    },
+    holidayHomePermitNumber: {
+      type: DataTypes.STRING(100),
+      allowNull: true
+    },
+    holidayHomePermitStatus: {
+      type: DataTypes.ENUM('Not_Uploaded', 'Pending', 'Approved', 'Rejected'),
+      allowNull: false,
+      defaultValue: 'Not_Uploaded'
+    },
+    holidayHomePermitExpiry: {
+      type: DataTypes.DATEONLY,
+      allowNull: true
+    },
+    accountHolderName: {
+      type: DataTypes.STRING(255),
+      allowNull: true
+    },
+    bankName: {
+      type: DataTypes.STRING(255),
+      allowNull: true
+    },
+    iban: {
+      type: DataTypes.STRING(50),
+      allowNull: true
+    },
+    trn: {
+      type: DataTypes.STRING(50),
+      allowNull: true
+    },
+    payoutStatus: {
+      type: DataTypes.ENUM('Not_Added', 'Pending', 'Verified', 'Rejected'),
+      allowNull: false,
+      defaultValue: 'Not_Added'
+    },
   }, {
     sequelize,
     tableName: 'users',
