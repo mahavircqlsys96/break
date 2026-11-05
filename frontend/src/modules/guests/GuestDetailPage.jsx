@@ -26,7 +26,6 @@ import { guestService } from "@/services";
 import { aed, date, label } from "@/lib/format";
 import { BackLink } from "../BackLink";
 import { BookingsTable } from "../BookingsTable";
-import { ReportsList } from "../support/ReportsList";
 import { SIGNUP_OPTIONS } from "./GuestsPage";
 
 export function GuestDetailPage() {
@@ -119,11 +118,6 @@ export function GuestDetailPage() {
               <BookingsTable rows={data.bookings} hide={["guest"]} />
             </div>
           </Card>
-          {data.reports.length > 0 && (
-            <Card title="Reports involving this guest">
-              <ReportsList reports={data.reports} />
-            </Card>
-          )}
         </div>
       </div>
 

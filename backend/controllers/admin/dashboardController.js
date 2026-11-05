@@ -20,12 +20,18 @@ module.exports = {
         bookingsCount,
         activeBookings,
         pendingWithdrawals,
+        liveProperties,
+        pendingProperties,
+        openReports,
       ] = await Promise.all([
         db.users.count({ where: { role: 'User', deletedAt: null } }),
         db.users.count({ where: { role: 'Host', deletedAt: null } }),
         db.bookings.count(),
         db.bookings.count({ where: { status: { [Op.in]: ['Pending', 'Confirmed'] } } }),
         Promise.resolve(0), // No withdrawal requests table exists
+        db.properties ? db.properties.count({ where: { status: 'Active', deletedAt: null } }).catch(() => 0) : Promise.resolve(0),
+        db.properties ? db.properties.count({ where: { permitStatus: 'Pending', deletedAt: null } }).catch(() => 0) : Promise.resolve(0),
+        db.reportUser ? db.reportUser.count({ where: { status: 'Pending' } }).catch(() => 0) : Promise.resolve(0),
       ]);
 
       const totalRevenueRow = await db.bookings.findOne({
@@ -86,6 +92,9 @@ module.exports = {
           bookingsCount,
           activeBookings,
           pendingWithdrawals,
+          liveProperties: Number(liveProperties || 0),
+          pendingProperties: Number(pendingProperties || 0),
+          openReports: Number(openReports || 0),
           totalRevenue: Number(totalRevenueRow?.total || 0),
           monthlyRevenue: Number(monthlyRevenueRow?.total || 0),
           averageBookingValue: Number(avgBookingValueRow?.avgValue || 0),

@@ -158,13 +158,13 @@ export const dashboardService = {
         return {
           guests: d.usersCount || 0,
           hosts: d.providersCount || 0,
-          liveProperties: 0,
-          pendingProperties: 0,
+          liveProperties: d.liveProperties || 0,
+          pendingProperties: d.pendingProperties || 0,
           bookings: d.bookingsCount || 0,
           revenue: d.totalRevenue || 0,
           commission: d.monthlyRevenue || 0,
-          openReports: d.pendingWithdrawals || 0,
-          trend: [], 
+          openReports: d.openReports || 0,
+          trend: b.trend || [], 
           byCategory: (b.topCategories || []).map(c => ({ name: c.name, value: c.count })),
           byCity: (b.topLocations || []).map(l => ({ name: l.name, value: l.count }))
         };
