@@ -3,12 +3,20 @@ import { createPortal } from "react-dom";
 import { Link, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  ArrowRight,
   Baby,
+  Calendar,
+  CalendarCheck,
   CalendarDays,
   CheckCircle2,
+  Clock,
   Coins,
   CreditCard,
   Download,
+  Info,
+  LogIn,
+  LogOut,
+  Moon,
   PawPrint,
   Percent,
   Receipt,
@@ -478,6 +486,274 @@ function BookingReceiptCard({ booking: b, guest, property, onDownload }) {
   );
 }
 
+/**
+ * Stay schedule & calendar breakdown showing Check-in, Check-out, duration,
+ * policies, and day-by-day reserved dates.
+ */
+function StayScheduleCard({ booking: b, property }) {
+  const nights = Math.max(1, Number(b.nights || 1));
+
+  const parseSafeDate = (d) => {
+    if (!d) return new Date();
+    if (d instanceof Date) return d;
+    if (typeof d === "string" && /^\d{4}-\d{2}-\d{2}/.test(d)) {
+      const parts = d.split("T")[0].split("-");
+      return new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]), 12, 0, 0);
+    }
+    const parsed = new Date(d);
+    return isNaN(parsed.getTime()) ? new Date() : parsed;
+  };
+
+  const startDate = parseSafeDate(b.checkIn);
+  const endDate = parseSafeDate(b.checkOut);
+
+  const formatLongDate = (d) => {
+    try {
+      return d.toLocaleDateString("en-US", {
+        weekday: "short",
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      });
+    } catch {
+      return date(d);
+    }
+  };
+
+  const formatFullDate = (d) => {
+    try {
+      return d.toLocaleDateString("en-US", {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      });
+    } catch {
+      return date(d);
+    }
+  };
+
+  const checkInTime = property?.houseRules?.checkIn
+    ? `From ${property.houseRules.checkIn}`
+    : "From 3:00 PM";
+  const checkOutTime = property?.houseRules?.checkOut
+    ? `By ${property.houseRules.checkOut}`
+    : "By 11:00 AM";
+
+  // Generate day-by-day dates list from check-in to check-out
+  const scheduleDays = [];
+  const baseYear = startDate.getFullYear();
+  const baseMonth = startDate.getMonth();
+  const baseDay = startDate.getDate();
+
+  for (let i = 0; i <= nights; i++) {
+    const curDate = new Date(baseYear, baseMonth, baseDay + i, 12, 0, 0);
+    const isFirst = i === 0;
+    const isLast = i === nights;
+
+    scheduleDays.push({
+      dayIndex: i + 1,
+      date: curDate,
+      dateStr: formatLongDate(curDate),
+      isCheckIn: isFirst,
+      isCheckOut: isLast,
+      isStayNight: !isLast,
+      nightNumber: isLast ? null : i + 1,
+      timing: isFirst ? checkInTime : isLast ? checkOutTime : "Full day reserved",
+      rate: isLast ? "Departure day" : aed(b.pricePerNight),
+    });
+  }
+
+  return (
+    <Card
+      title="Stay Schedule & Booking Dates"
+      action={
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-accent-soft px-3 py-1 text-xs font-semibold text-accent">
+          <Moon className="size-3.5" />
+          {nights} Night{nights > 1 ? "s" : ""} Stay
+        </span>
+      }
+    >
+      {/* Visual Check-in / Check-out Banner */}
+      <div className="rounded-2xl border border-line bg-gradient-to-br from-emerald-50/40 via-white to-indigo-50/40 p-5">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-7 md:items-center">
+          {/* Check-in Block */}
+          <div className="rounded-xl border border-emerald-100 bg-white p-4 shadow-xs md:col-span-3">
+            <div className="flex items-center justify-between">
+              <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-emerald-700">
+                <span className="flex size-6 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700">
+                  <LogIn className="size-3.5" />
+                </span>
+                Check-in
+              </span>
+              <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
+                Arrival
+              </span>
+            </div>
+            <p className="mt-3 text-lg font-bold text-ink">
+              {formatFullDate(startDate)}
+            </p>
+            <div className="mt-1 flex items-center gap-1.5 text-xs font-medium text-ink-muted">
+              <Clock className="size-3.5 text-emerald-600" />
+              <span>{checkInTime}</span>
+            </div>
+          </div>
+
+          {/* Nights Duration Connector */}
+          <div className="flex flex-col items-center justify-center text-center md:col-span-1">
+            <div className="flex items-center gap-1 rounded-full border border-line bg-white px-2.5 py-1 text-xs font-semibold text-ink shadow-xs">
+              <Moon className="size-3 text-accent" />
+              <span>{nights}n</span>
+            </div>
+            <div className="mt-1 hidden text-ink-muted md:block">
+              <ArrowRight className="size-4" />
+            </div>
+          </div>
+
+          {/* Check-out Block */}
+          <div className="rounded-xl border border-indigo-100 bg-white p-4 shadow-xs md:col-span-3">
+            <div className="flex items-center justify-between">
+              <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-indigo-700">
+                <span className="flex size-6 items-center justify-center rounded-lg bg-indigo-100 text-indigo-700">
+                  <LogOut className="size-3.5" />
+                </span>
+                Check-out
+              </span>
+              <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-semibold text-indigo-700">
+                Departure
+              </span>
+            </div>
+            <p className="mt-3 text-lg font-bold text-ink">
+              {formatFullDate(endDate)}
+            </p>
+            <div className="mt-1 flex items-center gap-1.5 text-xs font-medium text-ink-muted">
+              <Clock className="size-3.5 text-indigo-600" />
+              <span>{checkOutTime}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Quick Timing & Policy Highlights */}
+        <div className="mt-4 grid grid-cols-2 gap-3 border-t border-line/70 pt-4 sm:grid-cols-4">
+          <div className="rounded-xl bg-bg/80 p-3">
+            <p className="text-[11px] font-semibold text-ink-muted">Booking Date</p>
+            <p className="mt-1 text-xs font-bold text-ink">{dateTime(b.createdAt)}</p>
+          </div>
+          <div className="rounded-xl bg-bg/80 p-3">
+            <p className="text-[11px] font-semibold text-ink-muted">Length of Stay</p>
+            <p className="mt-1 text-xs font-bold text-ink">
+              {nights} Night{nights > 1 ? "s" : ""} ({nights + 1} Days)
+            </p>
+          </div>
+          <div className="rounded-xl bg-bg/80 p-3">
+            <p className="text-[11px] font-semibold text-ink-muted">Nightly Rate</p>
+            <p className="mt-1 text-xs font-bold text-ink">
+              {aed(b.pricePerNight)} <span className="text-[10px] font-normal text-ink-muted">/ night</span>
+            </p>
+          </div>
+          <div className="rounded-xl bg-bg/80 p-3">
+            <p className="text-[11px] font-semibold text-ink-muted">Permit / Ref</p>
+            <p className="mt-1 truncate text-xs font-bold text-ink">
+              {property?.holidayHomePermitNumber || b.holidayHomePermitNumber || b.code || "DET 1234567"}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Day-by-Day Reserved Dates Itinerary Table */}
+      <div className="mt-4">
+        <div className="mb-2.5 flex items-center justify-between">
+          <h4 className="text-xs font-bold uppercase tracking-wider text-ink-muted">
+            Reserved Calendar Schedule ({scheduleDays.length} Days)
+          </h4>
+          <span className="text-xs text-ink-muted">
+            All dates locked for this reservation
+          </span>
+        </div>
+
+        <div className="overflow-x-auto rounded-xl border border-line/80">
+          <table className="w-full text-left text-xs">
+            <thead className="border-b border-line bg-bg/70 text-[11px] font-semibold text-ink-muted">
+              <tr>
+                <th className="px-4 py-2.5">Date</th>
+                <th className="px-4 py-2.5">Stage & Event</th>
+                <th className="px-4 py-2.5">Timing</th>
+                <th className="px-4 py-2.5 text-right">Nightly Rate</th>
+                <th className="px-4 py-2.5 text-center">Status</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-line/60 bg-white">
+              {scheduleDays.map((s) => (
+                <tr
+                  key={s.dateStr}
+                  className={`transition hover:bg-slate-50/60 ${
+                    s.isCheckIn
+                      ? "bg-emerald-50/20"
+                      : s.isCheckOut
+                      ? "bg-indigo-50/20"
+                      : ""
+                  }`}
+                >
+                  <td className="whitespace-nowrap px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <span className="flex size-7 items-center justify-center rounded-lg bg-bg font-mono text-[11px] font-bold text-ink">
+                        {s.dayIndex}
+                      </span>
+                      <div>
+                        <p className="font-semibold text-ink">{s.dateStr}</p>
+                        <p className="text-[11px] text-ink-muted">
+                          {s.isCheckIn
+                            ? "Check-in Day"
+                            : s.isCheckOut
+                            ? "Check-out Day"
+                            : `Stay Night ${s.nightNumber}`}
+                        </p>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="whitespace-nowrap px-4 py-3">
+                    {s.isCheckIn ? (
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-2.5 py-1 text-[11px] font-semibold text-emerald-800">
+                        <LogIn className="size-3" />
+                        Check-in & Night 1
+                      </span>
+                    ) : s.isCheckOut ? (
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-indigo-100 px-2.5 py-1 text-[11px] font-semibold text-indigo-800">
+                        <LogOut className="size-3" />
+                        Check-out & Departure
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-800">
+                        <Moon className="size-3 text-slate-600" />
+                        Night {s.nightNumber} Stay
+                      </span>
+                    )}
+                  </td>
+                  <td className="whitespace-nowrap px-4 py-3 text-ink-muted">
+                    <span className="inline-flex items-center gap-1">
+                      <Clock className="size-3 text-ink-muted" />
+                      {s.timing}
+                    </span>
+                  </td>
+                  <td className="whitespace-nowrap px-4 py-3 text-right font-medium text-ink">
+                    {s.rate}
+                  </td>
+                  <td className="whitespace-nowrap px-4 py-3 text-center">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
+                      <CheckCircle2 className="size-3" />
+                      Reserved
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
 export function BookingDetailPage() {
   const { id = "" } = useParams();
   const qc = useQueryClient();
@@ -640,6 +916,9 @@ export function BookingDetailPage() {
               </p>
             </Card>
           )}
+
+          {/* Stay Schedule & Booking Dates (Check-in, Check-out, Itinerary) */}
+          <StayScheduleCard booking={b} property={property} />
 
           {/* Embedded Receipt Card for Review / Export */}
           <Card title="Tax Invoice & Booking Receipt">

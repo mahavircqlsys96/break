@@ -72,17 +72,17 @@ module.exports = {
       });
 
       const recentUsers = await db.users.findAll({
-        where: { role: 'User' },
+        where: { role: 'User', deletedAt: null },
         limit: 8,
         order: [['createdAt', 'DESC']],
-        attributes: ['id', 'name', 'email', 'phone', 'status', 'createdAt'],
+        attributes: ['id', 'name', 'email', 'phone', 'image', 'status', 'createdAt'],
       });
 
       const recentProviders = await db.users.findAll({
-        where: { role: 'Host' },
+        where: { role: 'Host', deletedAt: null },
         limit: 8,
         order: [['createdAt', 'DESC']],
-        attributes: ['id', 'name', 'email', 'status', 'createdAt'],
+        attributes: ['id', 'name', 'email', 'phone', 'image', 'status', 'createdAt'],
       });
 
       const avgBookingValueRow = await db.bookings.findOne({

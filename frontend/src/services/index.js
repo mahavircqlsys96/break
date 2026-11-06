@@ -161,6 +161,24 @@ export const dashboardService = {
         byCity: count(
           (b) => db.cities.find((c) => c.id === prop(b).cityId).name,
         ).slice(0, 5),
+        recentUsers: (db.guests || []).slice(0, 6).map((g) => ({
+          id: g.id,
+          name: g.name,
+          email: g.email,
+          phone: `${g.dialCode || ''} ${g.phone || ''}`.trim(),
+          image: g.image,
+          status: g.status || 'active',
+          createdAt: g.joinedAt || g.createdAt || new Date().toISOString(),
+        })),
+        recentHosts: (db.hosts || []).slice(0, 6).map((h) => ({
+          id: h.id,
+          name: h.name,
+          email: h.email,
+          phone: `${h.dialCode || ''} ${h.phone || ''}`.trim(),
+          image: h.image,
+          status: h.status || 'active',
+          createdAt: h.joinedAt || h.createdAt || new Date().toISOString(),
+        })),
       };
     }).then((res) => {
       // If it has 'success' field, it's the real backend response
@@ -180,7 +198,25 @@ export const dashboardService = {
           openReports: d.openReports || 0,
           trend: b.trend || [], 
           byCategory: (b.topCategories || []).map(c => ({ name: c.name, value: c.count })),
-          byCity: (b.topLocations || []).map(l => ({ name: l.name, value: l.count }))
+          byCity: (b.topLocations || []).map(l => ({ name: l.name, value: l.count })),
+          recentUsers: (b.recentUsers || []).map((u) => ({
+            id: u.id,
+            name: u.name || '—',
+            email: u.email || '—',
+            phone: u.phone || '—',
+            image: u.image ? (u.image.startsWith('http') ? u.image : import.meta.env.VITE_IMAGE_BASE + (u.image.startsWith('/') ? u.image.substring(1) : u.image)) : null,
+            status: u.status ? String(u.status).toLowerCase() : 'active',
+            createdAt: u.createdAt || new Date().toISOString(),
+          })),
+          recentHosts: (b.recentProviders || []).map((h) => ({
+            id: h.id,
+            name: h.name || '—',
+            email: h.email || '—',
+            phone: h.phone || '—',
+            image: h.image ? (h.image.startsWith('http') ? h.image : import.meta.env.VITE_IMAGE_BASE + (h.image.startsWith('/') ? h.image.substring(1) : h.image)) : null,
+            status: h.status ? String(h.status).toLowerCase() : 'active',
+            createdAt: h.createdAt || new Date().toISOString(),
+          })),
         };
       }
       return res; // mock response
@@ -654,6 +690,26 @@ export const propertyService = {
 
 // ---------- bookings ----------
 
+const resolveStayDates = (rawDates, noOfDays, fallbackDate) => {
+  const nights = Math.max(1, Number(noOfDays || 1));
+  const list = Array.isArray(rawDates) ? rawDates : [];
+  let checkIn = list[0]?.checkIn || list[0]?.date || fallbackDate || new Date().toISOString();
+  let checkOut = list[0]?.checkOut || list[list.length - 1]?.checkOut;
+
+  const inTime = new Date(checkIn).getTime();
+  const outTime = checkOut ? new Date(checkOut).getTime() : NaN;
+
+  if (isNaN(outTime) || outTime <= inTime) {
+    if (!isNaN(inTime)) {
+      checkOut = new Date(inTime + nights * 86400000).toISOString();
+    } else {
+      checkOut = checkIn;
+    }
+  }
+
+  return { checkIn, checkOut, nights, bookingDatesList: list };
+};
+
 export const bookingService = {
   list: (q) =>
     api.get(
@@ -668,21 +724,25 @@ export const bookingService = {
       if (res && res.success !== undefined) {
         const items = res.body?.list || [];
         return {
-          items: items.map(b => ({
-            ...b,
-            code: b.bookingNumber || b.id,
-            guestName: b.user?.name || '—',
-            propertyName: b.property?.basicInfo || '—',
-            propertyPhoto: b.property?.propertiesPhotos?.[0]?.image ? (b.property.propertiesPhotos[0].image.startsWith('http') ? b.property.propertiesPhotos[0].image : import.meta.env.VITE_IMAGE_BASE + (b.property.propertiesPhotos[0].image.startsWith('/') ? b.property.propertiesPhotos[0].image.substring(1) : b.property.propertiesPhotos[0].image)) : 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?q=80&w=2070&auto=format&fit=crop',
-            hostName: b.property?.host?.name || '—',
-            total: b.total || b.amount || 0,
-            promoCode: b.promoCode || null,
-            promoDiscount: Number(b.promoDiscount || 0),
-            status: b.status ? String(b.status).toLowerCase() : 'pending',
-            paymentStatus: b.paymentStatus ? String(b.paymentStatus).toLowerCase() : 'pending',
-            checkIn: b.bookingDates?.[0]?.checkIn || b.bookingDates?.[0]?.date || new Date().toISOString(),
-            checkOut: b.bookingDates?.[0]?.checkOut || b.bookingDates?.[b.bookingDates?.length - 1]?.date || new Date().toISOString(),
-          })),
+          items: items.map(b => {
+            const stayDates = resolveStayDates(b.bookingDates, b.noOfDays, b.createdAt);
+            return {
+              ...b,
+              code: b.bookingNumber || b.id,
+              guestName: b.user?.name || '—',
+              propertyName: b.property?.basicInfo || '—',
+              propertyPhoto: b.property?.propertiesPhotos?.[0]?.image ? (b.property.propertiesPhotos[0].image.startsWith('http') ? b.property.propertiesPhotos[0].image : import.meta.env.VITE_IMAGE_BASE + (b.property.propertiesPhotos[0].image.startsWith('/') ? b.property.propertiesPhotos[0].image.substring(1) : b.property.propertiesPhotos[0].image)) : 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?q=80&w=2070&auto=format&fit=crop',
+              hostName: b.property?.host?.name || '—',
+              total: b.total || b.amount || 0,
+              promoCode: b.promoCode || null,
+              promoDiscount: Number(b.promoDiscount || 0),
+              status: b.status ? String(b.status).toLowerCase() : 'pending',
+              paymentStatus: b.paymentStatus ? String(b.paymentStatus).toLowerCase() : 'pending',
+              checkIn: stayDates.checkIn,
+              checkOut: stayDates.checkOut,
+              nights: stayDates.nights,
+            };
+          }),
           total: res.body?.total || 0,
           page: res.body?.currentPage || 1,
           pageSize: q?.pageSize || 10,
@@ -703,12 +763,13 @@ export const bookingService = {
     }).then((res) => {
       if (res && res.success !== undefined) {
         const b = res.body || {};
+        const stayDates = resolveStayDates(b.bookingDates, b.noOfDays || b.nights, b.createdAt || b.checkIn);
         return {
           booking: {
             ...b,
             code: b.bookingNumber || b.id,
             pets: b.bringPet === 'yes' ? 1 : 0,
-            nights: b.noOfDays || 1,
+            nights: stayDates.nights,
             pricePerNight: b.property?.price || 0,
             propertyName: b.property?.basicInfo || '—',
             propertyPhoto: b.property?.propertiesPhotos?.[0]?.image ? (b.property.propertiesPhotos[0].image.startsWith('http') ? b.property.propertiesPhotos[0].image : import.meta.env.VITE_IMAGE_BASE + (b.property.propertiesPhotos[0].image.startsWith('/') ? b.property.propertiesPhotos[0].image.substring(1) : b.property.propertiesPhotos[0].image)) : 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?q=80&w=2070&auto=format&fit=crop',
@@ -726,8 +787,9 @@ export const bookingService = {
             ),
             commissionPercent: Number(b.commissionPercent || 15),
             hostAmount: Number(b.hostAmount || (b.amount ? Number(b.amount) - (b.adminCommission || Math.round(Number(b.amount) * 0.15)) : 0)),
-            checkIn: b.bookingDates?.[0]?.checkIn || b.bookingDates?.[0]?.date || new Date().toISOString(),
-            checkOut: b.bookingDates?.[0]?.checkOut || b.bookingDates?.[b.bookingDates?.length - 1]?.date || new Date().toISOString(),
+            bookingDatesList: stayDates.bookingDatesList,
+            checkIn: stayDates.checkIn,
+            checkOut: stayDates.checkOut,
           },
           guest: b.user,
           host: b.property?.host,

@@ -23,15 +23,14 @@ import {
   CalendarCheck,
   Coins,
   Home,
-  TrendingUp,
+  UserCheck,
   Users,
-  Wallet,
 } from "lucide-react";
-import { Button, Photo, StatusBadge } from "@/components/ui";
+import { Avatar, Button, Photo, StatusBadge } from "@/components/ui";
 import { bookingService, dashboardService, propertyService } from "@/services";
 import { api } from "@/services/api";
 import { useAuth } from "@/auth/AuthContext";
-import { aed, dateRange } from "@/lib/format";
+import { aed, ago, dateRange } from "@/lib/format";
 
 const DEFAULT_TREND = [
   { month: "Oct", revenue: 0, bookings: 0 },
@@ -316,6 +315,27 @@ export function DashboardPage() {
         }))
       : DEFAULT_PENDING_PROPERTIES;
 
+  // Recent user & host signups
+  const recentUsersList =
+    stats?.recentUsers && stats.recentUsers.length > 0
+      ? stats.recentUsers.slice(0, 5)
+      : [
+          { id: "u_1", name: "Ahmed Al Mansoori", email: "ahmed.m@example.ae", status: "active", createdAt: "2026-11-05T12:00:00Z" },
+          { id: "u_2", name: "Sarah Jenkins", email: "sarah.j@gmail.com", status: "active", createdAt: "2026-11-04T15:30:00Z" },
+          { id: "u_3", name: "Khalid Al Zaabi", email: "khalid.z@break.ae", status: "active", createdAt: "2026-11-03T09:15:00Z" },
+          { id: "u_4", name: "Elena Rostova", email: "elena.r@outlook.com", status: "active", createdAt: "2026-11-02T18:40:00Z" },
+        ];
+
+  const recentHostsList =
+    stats?.recentHosts && stats.recentHosts.length > 0
+      ? stats.recentHosts.slice(0, 5)
+      : [
+          { id: "h_1", name: "Rashid Al Maktoum Properties", email: "rashid@palmvillas.ae", status: "active", createdAt: "2026-11-05T14:20:00Z" },
+          { id: "h_2", name: "Desert Oasis Hospitality", email: "oasis@marmoom.com", status: "active", createdAt: "2026-11-04T11:00:00Z" },
+          { id: "h_3", name: "Fatima Al Suwaidi", email: "fatima.s@fujairahstays.ae", status: "active", createdAt: "2026-11-03T16:45:00Z" },
+          { id: "h_4", name: "Zayed Luxury Escapes", email: "contact@zayedescapes.ae", status: "active", createdAt: "2026-11-01T10:10:00Z" },
+        ];
+
   return (
     <div className="space-y-6">
       {/* Top Header */}
@@ -336,62 +356,43 @@ export function DashboardPage() {
         </button>
       </div>
 
-      {/* 5 Top Stat Cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-        {/* Card 1: Admin Earnings */}
-        <div className="card flex items-start gap-3.5 p-5 border-indigo-200/60 bg-gradient-to-br from-white to-indigo-50/30 shadow-xs">
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-[#5B50A0]/10 text-[#5B50A0]">
-            <Wallet className="size-5" />
-          </span>
-          <div className="min-w-0">
-            <p className="text-xs font-semibold text-indigo-900/80">
-              Admin Earnings
-            </p>
-            <p className="mt-0.5 truncate text-2xl font-bold tracking-tight text-[#2A2542]">
-              {aed(commissionVal)}
-            </p>
-            <p className="mt-1 flex items-center gap-1 text-[11px] text-emerald-700 font-medium">
-              <TrendingUp className="size-3 text-emerald-600" />
-              <span>Platform commission</span>
-            </p>
-          </div>
-        </div>
-
-        {/* Card 2: Gross booking value */}
+      {/* 4 Top Stat Cards */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {/* Card 1: Admin earnings */}
         <div className="card flex items-start gap-3.5 p-5">
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-accent-soft text-accent">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent">
             <Coins className="size-5" />
           </span>
           <div className="min-w-0">
             <p className="text-xs font-medium text-ink-muted">
-              Gross booking value
+              Admin earnings
             </p>
             <p className="mt-0.5 truncate text-2xl font-bold tracking-tight text-ink">
-              {aed(revenueVal)}
+              {aed(commissionVal)}
             </p>
             <p className="mt-1 text-[11px] text-ink-muted">
-              All bookings total
+              Gross booking value {aed(revenueVal)}
             </p>
           </div>
         </div>
 
-        {/* Card 3: Bookings */}
+        {/* Card 2: Bookings */}
         <div className="card flex items-start gap-3.5 p-5">
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-success-soft text-success">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-success-soft text-success">
             <CalendarCheck className="size-5" />
           </span>
           <div className="min-w-0">
-            <p className="text-xs font-medium text-ink-muted">Total bookings</p>
+            <p className="text-xs font-medium text-ink-muted">Bookings</p>
             <p className="mt-0.5 truncate text-2xl font-bold tracking-tight text-ink">
               {bookingsCount}
             </p>
-            <p className="mt-1 text-[11px] text-ink-muted">All-time bookings</p>
+            <p className="mt-1 text-[11px] text-ink-muted">All-time</p>
           </div>
         </div>
 
-        {/* Card 4: Live properties */}
+        {/* Card 3: Live properties */}
         <div className="card flex items-start gap-3.5 p-5">
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-warning-soft text-[#B8740F]">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-warning-soft text-[#B8740F]">
             <Home className="size-5" />
           </span>
           <div className="min-w-0">
@@ -405,9 +406,9 @@ export function DashboardPage() {
           </div>
         </div>
 
-        {/* Card 5: Guests • Hosts */}
+        {/* Card 4: Guests • Hosts */}
         <div className="card flex items-start gap-3.5 p-5">
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-accent-soft text-accent">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent">
             <Users className="size-5" />
           </span>
           <div className="min-w-0">
@@ -765,6 +766,115 @@ export function DashboardPage() {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Row 4: Recent Signups (Users & Hosts) */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        {/* Left: Recent User Signups */}
+        <div className="card overflow-hidden">
+          <div className="flex items-center justify-between border-b border-line/60 px-5 py-4">
+            <div className="flex items-center gap-2.5">
+              <span className="flex size-8 items-center justify-center rounded-xl bg-accent-soft text-accent">
+                <UserCheck className="size-4" />
+              </span>
+              <div>
+                <h3 className="text-[15px] font-bold text-ink">Recent user signups</h3>
+                <p className="text-[11px] text-ink-muted">Latest guest accounts registered</p>
+              </div>
+            </div>
+            <Link
+              to="/guests"
+              className="inline-flex items-center gap-1 text-xs font-semibold text-accent transition hover:underline"
+            >
+              View all &rarr;
+            </Link>
+          </div>
+
+          <div className="divide-y divide-line/40">
+            {recentUsersList.length === 0 ? (
+              <p className="p-6 text-center text-xs text-ink-muted">No recent users found.</p>
+            ) : (
+              recentUsersList.map((u) => (
+                <div
+                  key={u.id}
+                  onClick={() => navigate(`/guests/${u.id}`)}
+                  className="flex items-center justify-between gap-3 px-5 py-3.5 transition hover:bg-accent-soft/30 cursor-pointer"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <Avatar name={u.name} src={u.image} size={38} />
+                    <div className="min-w-0">
+                      <p className="truncate text-xs font-semibold text-ink hover:text-accent">
+                        {u.name}
+                      </p>
+                      <p className="truncate text-[11px] text-ink-muted">
+                        {u.email}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-end shrink-0">
+                    <StatusBadge status={u.status || "active"} />
+                    <p className="mt-1 text-[10px] text-ink-muted whitespace-nowrap">
+                      {ago(u.createdAt)}
+                    </p>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* Right: Recent Host Signups */}
+        <div className="card overflow-hidden">
+          <div className="flex items-center justify-between border-b border-line/60 px-5 py-4">
+            <div className="flex items-center gap-2.5">
+              <span className="flex size-8 items-center justify-center rounded-xl bg-warning-soft text-[#B8740F]">
+                <Building2 className="size-4" />
+              </span>
+              <div>
+                <h3 className="text-[15px] font-bold text-ink">Recent host signups</h3>
+                <p className="text-[11px] text-ink-muted">Latest host partner accounts registered</p>
+              </div>
+            </div>
+            <Link
+              to="/hosts"
+              className="inline-flex items-center gap-1 text-xs font-semibold text-accent transition hover:underline"
+            >
+              View all &rarr;
+            </Link>
+          </div>
+
+          <div className="divide-y divide-line/40">
+            {recentHostsList.length === 0 ? (
+              <p className="p-6 text-center text-xs text-ink-muted">No recent hosts found.</p>
+            ) : (
+              recentHostsList.map((h) => (
+                <div
+                  key={h.id}
+                  onClick={() => navigate(`/hosts/${h.id}`)}
+                  className="flex items-center justify-between gap-3 px-5 py-3.5 transition hover:bg-accent-soft/30 cursor-pointer"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <Avatar name={h.name} src={h.image} size={38} />
+                    <div className="min-w-0">
+                      <p className="truncate text-xs font-semibold text-ink hover:text-accent">
+                        {h.name}
+                      </p>
+                      <p className="truncate text-[11px] text-ink-muted">
+                        {h.email}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-end shrink-0">
+                    <StatusBadge status={h.status || "active"} />
+                    <p className="mt-1 text-[10px] text-ink-muted whitespace-nowrap">
+                      {ago(h.createdAt)}
+                    </p>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>
