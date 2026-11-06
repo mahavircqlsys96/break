@@ -38,15 +38,55 @@
   }
 }
 
+/* Print styles: when printing, hide everything in #root and show ONLY #print-receipt-root */
+@media screen {
+  #print-receipt-root,
+  .print-only-receipt {
+    display: none !important;
+  }
+}
+
 @media print {
+  @page {
+    size: auto;
+    margin: 8mm 12mm;
+  }
+
+  /* Completely hide the entire React App and normal page content */
+  #root,
+  body > *:not(#print-receipt-root) {
+    display: none !important;
+    visibility: hidden !important;
+    height: 0 !important;
+    max-height: 0 !important;
+    overflow: hidden !important;
+  }
+
   body {
     background: #ffffff !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
-  aside,
-  header,
-  nav,
-  .no-print,
-  button:not(.allow-print) {
+
+  /* Display ONLY the print receipt */
+  #print-receipt-root,
+  .print-only-receipt {
+    display: flex !important;
+    visibility: visible !important;
+    justify-content: center !important;
+    align-items: flex-start !important;
+    width: 100% !important;
+    padding: 20px 0 !important;
+    background: #ffffff !important;
+  }
+
+  #print-receipt-root * {
+    visibility: visible !important;
+  }
+
+  .no-print {
     display: none !important;
   }
 }

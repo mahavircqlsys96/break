@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { Link, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -8,7 +9,6 @@ import {
   CreditCard,
   Download,
   PawPrint,
-  Printer,
   Receipt,
   Ticket,
   Users,
@@ -32,9 +32,10 @@ import { aed, date, dateTime, label } from "@/lib/format";
 import { BackLink } from "../BackLink";
 
 /**
- * Generates and prints ONLY the clean official receipt card without any surrounding webpage or admin layout.
+ * Opens a dedicated popup print window containing ONLY the official receipt ticket.
+ * If popups are blocked, falls back to portal-isolated window.print().
  */
-function printOnlyReceipt(b, guest, property) {
+function downloadOnlyReceipt(b, guest, property) {
   const isPaid =
     b.paymentStatus === "paid" ||
     b.paymentStatus === "succeeded" ||
@@ -65,309 +66,190 @@ function printOnlyReceipt(b, guest, property) {
 
   const promoSection = b.promoCode
     ? `
-      <div class="row promo-row">
-        <span class="promo-label">🎟 Promo code (${b.promoCode})</span>
-        <span class="promo-value">-${aed(b.promoDiscount || b.discountAmount || 0)}</span>
+      <div style="display:flex;justify-content:space-between;align-items:center;color:#059669;font-weight:600;background:#ecfdf5;padding:5px 8px;border-radius:8px;margin:3px 0;">
+        <span>🎟 Promo code (${b.promoCode})</span>
+        <span>-${aed(b.promoDiscount || b.discountAmount || 0)}</span>
       </div>
     `
     : "";
 
   const cleaningFee =
     b.cleaningFee > 0
-      ? `<div class="row muted"><span>Cleaning fee</span><span>${aed(b.cleaningFee)}</span></div>`
+      ? `<div style="display:flex;justify-content:space-between;color:#716e7f;margin-top:3px;"><span>Cleaning fee</span><span>${aed(b.cleaningFee)}</span></div>`
       : "";
   const serviceFee =
     b.serviceFee > 0
-      ? `<div class="row muted"><span>Break service fee</span><span>${aed(b.serviceFee)}</span></div>`
+      ? `<div style="display:flex;justify-content:space-between;color:#716e7f;margin-top:3px;"><span>Break service fee</span><span>${aed(b.serviceFee)}</span></div>`
       : "";
   const vat =
     b.vat > 0
-      ? `<div class="row muted"><span>VAT</span><span>${aed(b.vat)}</span></div>`
+      ? `<div style="display:flex;justify-content:space-between;color:#716e7f;margin-top:3px;"><span>VAT</span><span>${aed(b.vat)}</span></div>`
       : "";
 
-  const html = `
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <meta charset="utf-8" />
-        <title>Receipt - ${bookingCode}</title>
-        <style>
-          @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap');
-          
-          @page {
-            size: auto;
-            margin: 10mm 12mm;
-          }
-          * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-          }
-          body {
-            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            color: #1e1b2e;
-            background: #ffffff;
-            display: flex;
-            justify-content: center;
-            align-items: flex-start;
-            padding: 24px 0;
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
-          }
-          .receipt-ticket {
-            width: 380px;
-            max-width: 100%;
-            border: 1px solid #e5e7eb;
-            border-radius: 24px;
-            padding: 24px;
-            background: #ffffff;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
-          }
-          .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-          }
-          .title {
-            font-family: 'Playfair Display', Georgia, serif;
-            font-size: 26px;
-            font-weight: 700;
-            color: #1a1727;
-            line-height: 1.1;
-          }
-          .inv-no {
-            margin-top: 4px;
-            font-size: 11px;
-            color: #716e7f;
-          }
-          .status-pill {
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-            padding: 3px 10px;
-            border-radius: 999px;
-            font-size: 11px;
-            font-weight: 600;
-            ${
-              isPaid
-                ? "background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0;"
-                : "background: #fffbeb; color: #b45309; border: 1px solid #fde68a;"
-            }
-          }
-          .status-dot {
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-            ${isPaid ? "background: #10b981;" : "background: #f59e0b;"}
-          }
-          .divider {
-            border-top: 1px solid #e5e7eb;
-            margin: 14px 0;
-          }
-          .details-list {
-            display: flex;
-            flex-direction: column;
-            gap: 9px;
-            font-size: 11.5px;
-          }
-          .row {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            gap: 12px;
-          }
-          .row.muted {
-            color: #716e7f;
-          }
-          .label {
-            color: #716e7f;
-            flex-shrink: 0;
-          }
-          .val {
-            font-weight: 500;
-            color: #1e1b2e;
-            text-align: right;
-            word-break: break-word;
-          }
-          .mono {
-            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-          }
-          .promo-row {
-            color: #059669;
-            font-weight: 600;
-            background: #ecfdf5;
-            padding: 4px 8px;
-            border-radius: 8px;
-            margin: 2px 0;
-          }
-          .promo-label {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-          }
-          .total-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding-top: 2px;
-          }
-          .total-label {
-            font-family: 'Playfair Display', Georgia, serif;
-            font-size: 18px;
-            font-weight: 700;
-            color: #1a1727;
-          }
-          .total-val {
-            font-family: 'Playfair Display', Georgia, serif;
-            font-size: 20px;
-            font-weight: 700;
-            color: #1a1727;
-          }
-          .payment-box {
-            margin-top: 14px;
-            background: #faf9f6;
-            border: 1px solid #eceae4;
-            border-radius: 16px;
-            padding: 10px 12px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-size: 11.5px;
-          }
-          .card-icon {
-            width: 32px;
-            height: 32px;
-            background: #ffffff;
-            border: 1px solid #e2dfd7;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 14px;
-          }
-          .card-title {
-            font-weight: 600;
-            color: #1e1b2e;
-          }
-          .card-time {
-            font-size: 10px;
-            color: #716e7f;
-            margin-top: 2px;
-          }
-          .footer-trn {
-            margin-top: 16px;
-            text-align: center;
-            font-size: 9.5px;
-            color: #8c8997;
-            line-height: 1.4;
-          }
-        </style>
-      </head>
-      <body>
-        <div class="receipt-ticket">
-          <div class="header">
-            <div>
-              <div class="title">Receipt</div>
-              <div class="inv-no">No. ${invNumber}</div>
-              <div class="inv-no">Issued ${date(b.createdAt)}</div>
+  try {
+    const printWindow = window.open("", "_blank", "width=450,height=720");
+    if (printWindow) {
+      printWindow.document.open();
+      printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <meta charset="utf-8" />
+            <title>Receipt_${bookingCode}</title>
+            <style>
+              @page { size: auto; margin: 10mm 12mm; }
+              * { box-sizing: border-box; margin: 0; padding: 0; }
+              body {
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Plus Jakarta Sans", sans-serif;
+                background: #ffffff;
+                color: #1e1b2e;
+                display: flex;
+                justify-content: center;
+                align-items: flex-start;
+                padding: 24px 0;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+              }
+              .ticket {
+                width: 380px;
+                max-width: 100%;
+                border: 1px solid #e5e7eb;
+                border-radius: 24px;
+                padding: 24px;
+                background: #ffffff;
+                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+              }
+              .header { display: flex; justify-content: space-between; align-items: flex-start; }
+              .title { font-size: 26px; font-weight: 700; font-family: Georgia, serif; color: #1a1727; line-height: 1.1; }
+              .inv { font-size: 11px; color: #716e7f; margin-top: 4px; }
+              .pill {
+                display: inline-flex;
+                align-items: center;
+                gap: 5px;
+                padding: 3px 10px;
+                border-radius: 999px;
+                font-size: 11px;
+                font-weight: 600;
+                ${isPaid ? "background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0;" : "background: #fffbeb; color: #b45309; border: 1px solid #fde68a;"}
+              }
+              .dot { width: 6px; height: 6px; border-radius: 50%; ${isPaid ? "background: #10b981;" : "background: #f59e0b;"} }
+              .divider { border-top: 1px solid #e5e7eb; margin: 14px 0; }
+              .list { display: flex; flex-direction: column; gap: 8px; font-size: 11.5px; }
+              .row { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+              .lbl { color: #716e7f; flex-shrink: 0; }
+              .val { font-weight: 500; color: #1e1b2e; text-align: right; }
+              .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+              .total { display: flex; justify-content: space-between; align-items: center; font-family: Georgia, serif; font-size: 19px; font-weight: 700; color: #1a1727; }
+              .pay-box {
+                margin-top: 14px;
+                background: #faf9f6;
+                border: 1px solid #eceae4;
+                border-radius: 16px;
+                padding: 10px 12px;
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                font-size: 11.5px;
+              }
+              .card-icon {
+                width: 32px;
+                height: 32px;
+                background: #ffffff;
+                border: 1px solid #e2dfd7;
+                border-radius: 10px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 14px;
+              }
+              .card-title { font-weight: 600; color: #1e1b2e; }
+              .card-time { font-size: 10px; color: #716e7f; margin-top: 2px; }
+              .footer { margin-top: 16px; text-align: center; font-size: 9.5px; color: #8c8997; line-height: 1.4; }
+            </style>
+          </head>
+          <body>
+            <div class="ticket">
+              <div class="header">
+                <div>
+                  <div class="title">Receipt</div>
+                  <div class="inv">No. ${invNumber}</div>
+                  <div class="inv">Issued ${date(b.createdAt)}</div>
+                </div>
+                <div class="pill">
+                  <span class="dot"></span>
+                  ${statusLabel}
+                </div>
+              </div>
+              <div class="divider"></div>
+              <div class="list">
+                <div class="row"><span class="lbl">Billed to</span><span class="val">${guestName}</span></div>
+                <div class="row"><span class="lbl">Booking</span><span class="val mono">${bookingCode}</span></div>
+                <div class="row"><span class="lbl">Stay</span><span class="val">${propertyName}</span></div>
+                <div class="row"><span class="lbl">Dates</span><span class="val">${dates}</span></div>
+                <div class="row"><span class="lbl">Holiday home permit</span><span class="val mono">${permitNumber}</span></div>
+              </div>
+              <div class="divider"></div>
+              <div class="list">
+                <div class="row"><span class="lbl">${rateLine}</span><span class="val">${subtotal}</span></div>
+                ${promoSection}
+                ${cleaningFee}
+                ${serviceFee}
+                ${vat}
+              </div>
+              <div class="divider"></div>
+              <div class="total"><span>Total paid</span><span>${total}</span></div>
+              <div class="pay-box">
+                <div class="card-icon">💳</div>
+                <div>
+                  <div class="card-title">${cardBrand} •••• ${cardLast4}</div>
+                  <div class="card-time">Charged ${chargedAt}</div>
+                </div>
+              </div>
+              <div class="footer">
+                Break Technologies LLC · Abu Dhabi, UAE - TRN 100 4827 5310 0003
+              </div>
+              <button
+                type="button"
+                onclick="window.print()"
+                class="no-print"
+                style="margin-top:16px;width:100%;padding:10px;background:#5B50A0;color:#fff;border:none;border-radius:12px;font-weight:600;font-size:13px;cursor:pointer;"
+              >
+                🖨 Print / Save PDF
+              </button>
             </div>
-            <div class="status-pill">
-              <span class="status-dot"></span>
-              ${statusLabel}
-            </div>
-          </div>
+            <script>
+              function triggerPrint() {
+                try {
+                  window.focus();
+                  window.print();
+                } catch(e) {}
+              }
+              if (document.readyState === 'complete') {
+                setTimeout(triggerPrint, 150);
+              } else {
+                window.addEventListener('load', function() { setTimeout(triggerPrint, 150); });
+              }
+            </script>
+          </body>
+        </html>
+      `);
+      printWindow.document.close();
+      try {
+        printWindow.focus();
+        setTimeout(() => {
+          try {
+            printWindow.print();
+          } catch (_) {}
+        }, 300);
+      } catch (_) {}
+      return;
+    }
+  } catch (err) {
+    console.warn("Popup window unavailable, using in-page print fallback:", err);
+  }
 
-          <div class="divider"></div>
-
-          <div class="details-list">
-            <div class="row">
-              <span class="label">Billed to</span>
-              <span class="val">${guestName}</span>
-            </div>
-            <div class="row">
-              <span class="label">Booking</span>
-              <span class="val mono">${bookingCode}</span>
-            </div>
-            <div class="row">
-              <span class="label">Stay</span>
-              <span class="val">${propertyName}</span>
-            </div>
-            <div class="row">
-              <span class="label">Dates</span>
-              <span class="val">${dates}</span>
-            </div>
-            <div class="row">
-              <span class="label">Holiday home permit</span>
-              <span class="val mono">${permitNumber}</span>
-            </div>
-          </div>
-
-          <div class="divider"></div>
-
-          <div class="details-list">
-            <div class="row">
-              <span class="label">${rateLine}</span>
-              <span class="val">${subtotal}</span>
-            </div>
-            ${promoSection}
-            ${cleaningFee}
-            ${serviceFee}
-            ${vat}
-          </div>
-
-          <div class="divider"></div>
-
-          <div class="total-row">
-            <div class="total-label">Total paid</div>
-            <div class="total-val">${total}</div>
-          </div>
-
-          <div class="payment-box">
-            <div class="card-icon">💳</div>
-            <div>
-              <div class="card-title">${cardBrand} •••• ${cardLast4}</div>
-              <div class="card-time">Charged ${chargedAt}</div>
-            </div>
-          </div>
-
-          <div class="footer-trn">
-            Break Technologies LLC · Abu Dhabi, UAE - TRN 100 4827 5310 0003
-          </div>
-        </div>
-
-        <script>
-          window.onload = function() {
-            setTimeout(function() {
-              window.focus();
-              window.print();
-            }, 250);
-          };
-        </script>
-      </body>
-    </html>
-  `;
-
-  // Create an invisible iframe attached to body
-  const iframe = document.createElement("iframe");
-  iframe.style.position = "fixed";
-  iframe.style.right = "0";
-  iframe.style.bottom = "0";
-  iframe.style.width = "0";
-  iframe.style.height = "0";
-  iframe.style.border = "0";
-  document.body.appendChild(iframe);
-
-  const doc = iframe.contentWindow.document;
-  doc.open();
-  doc.write(html);
-  doc.close();
-
-  // Remove the iframe after the print dialog finishes
-  setTimeout(() => {
-    try {
-      document.body.removeChild(iframe);
-    } catch {}
-  }, 60000);
+  // Fallback: in-page print using portal (#print-receipt-root)
+  window.print();
 }
 
 function BookingReceiptCard({ booking: b, guest, property, onDownload }) {
@@ -571,8 +453,8 @@ export function BookingDetailPage() {
   const active = b.status === "pending" || b.status === "confirmed";
 
   const handleDownloadPDF = () => {
-    toast("Preparing official receipt PDF...");
-    printOnlyReceipt(b, guest, property);
+    toast("Preparing receipt PDF...");
+    downloadOnlyReceipt(b, guest, property);
   };
 
   return (
@@ -852,6 +734,19 @@ export function BookingDetailPage() {
           />
         </div>
       </Modal>
+
+      {/* Direct Portal to document.body: Guarantees ONLY the receipt is printed if standard browser print (Ctrl+P) is triggered */}
+      {typeof document !== "undefined" &&
+        createPortal(
+          <div id="print-receipt-root" className="print-only-receipt">
+            <BookingReceiptCard
+              booking={b}
+              guest={guest}
+              property={property}
+            />
+          </div>,
+          document.body
+        )}
 
       <ConfirmDialog
         open={cancel}
