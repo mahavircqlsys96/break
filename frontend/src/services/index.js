@@ -134,12 +134,24 @@ export const dashboardService = {
           .length,
         bookings: db.bookings.length,
         revenue: paid.reduce((s, b) => s + b.total, 0),
+        adminEarnings: paid.reduce(
+          (s, b) =>
+            s +
+            (b.adminCommission ||
+              Math.round(b.subtotal * ((db.appSettings?.commissionPercent || 15) / 100)) +
+              (b.serviceFee || 0)),
+          0,
+        ),
         commission: paid.reduce(
           (s, b) =>
             s +
-            Math.round(b.subtotal * (db.appSettings.commissionPercent / 100)) +
-            b.serviceFee,
+            (b.adminCommission ||
+              Math.round(b.subtotal * ((db.appSettings?.commissionPercent || 15) / 100)) +
+              (b.serviceFee || 0)),
           0,
+        ),
+        monthlyRevenue: Math.round(
+          paid.reduce((s, b) => s + (b.adminCommission || b.subtotal * 0.15), 0) * 0.35,
         ),
         openReports: db.reports.filter((r) => r.status === "open").length,
         trend,
@@ -161,8 +173,10 @@ export const dashboardService = {
           liveProperties: d.liveProperties || 0,
           pendingProperties: d.pendingProperties || 0,
           bookings: d.bookingsCount || 0,
-          revenue: d.totalRevenue || 0,
-          commission: d.monthlyRevenue || 0,
+          revenue: d.grossBookingValue || d.totalRevenue || 0,
+          adminEarnings: d.adminEarnings || d.totalRevenue || 0,
+          commission: d.adminEarnings || d.monthlyRevenue || 0,
+          monthlyRevenue: d.monthlyRevenue || 0,
           openReports: d.openReports || 0,
           trend: b.trend || [], 
           byCategory: (b.topCategories || []).map(c => ({ name: c.name, value: c.count })),
@@ -706,6 +720,12 @@ export const bookingService = {
             promoCode: b.promoCode || null,
             promoDiscount: Number(b.promoDiscount || b.discountAmount || 0),
             originalAmount: Number(b.originalAmount || b.subtotal || b.amount || 0),
+            adminCommission: Number(
+              b.adminCommission ||
+              (b.amount ? Math.round(Number(b.amount) * 0.15) : 0)
+            ),
+            commissionPercent: Number(b.commissionPercent || 15),
+            hostAmount: Number(b.hostAmount || (b.amount ? Number(b.amount) - (b.adminCommission || Math.round(Number(b.amount) * 0.15)) : 0)),
             checkIn: b.bookingDates?.[0]?.checkIn || b.bookingDates?.[0]?.date || new Date().toISOString(),
             checkOut: b.bookingDates?.[0]?.checkOut || b.bookingDates?.[b.bookingDates?.length - 1]?.date || new Date().toISOString(),
           },
@@ -1201,11 +1221,51 @@ export const cmsService = {
 // ---------- settings ----------
 
 export const settingsService = {
-  get: () => api.get("/admin/settings", () => db.appSettings),
+  get: () =>
+    api.get("/admin/settings", () => {
+      if (typeof localStorage !== "undefined") {
+        const stored = localStorage.getItem("break_settings");
+        if (stored) {
+          try { Object.assign(db.appSettings, JSON.parse(stored)); } catch (_) {}
+        }
+      }
+      return db.appSettings;
+    }).then((res) => {
+      if (res && res.success !== undefined) {
+        const data = res.body || res.data || db.appSettings;
+        if (typeof localStorage !== "undefined" && data) {
+          localStorage.setItem("break_settings", JSON.stringify(data));
+          if (data.commissionPercent !== undefined) {
+            localStorage.setItem("break_admin_commission", String(data.commissionPercent));
+          }
+        }
+        return data;
+      }
+      return res;
+    }),
   update: (input) =>
-    api.put("/admin/settings", input, () =>
-      Object.assign(db.appSettings, input),
-    ),
+    api.put("/admin/settings", input, () => {
+      Object.assign(db.appSettings, input);
+      if (typeof localStorage !== "undefined") {
+        localStorage.setItem("break_settings", JSON.stringify(db.appSettings));
+        if (input.commissionPercent !== undefined) {
+          localStorage.setItem("break_admin_commission", String(input.commissionPercent));
+        }
+      }
+      return db.appSettings;
+    }).then((res) => {
+      if (res && res.success !== undefined) {
+        const data = res.body || res.data || db.appSettings;
+        if (typeof localStorage !== "undefined" && data) {
+          localStorage.setItem("break_settings", JSON.stringify(data));
+          if (data.commissionPercent !== undefined) {
+            localStorage.setItem("break_admin_commission", String(data.commissionPercent));
+          }
+        }
+        return data;
+      }
+      return res;
+    }),
   admins: crud("admins", db.admins, "a"),
   deletionRequests: () =>
     api.get("/admin/deletion-requests", () =>

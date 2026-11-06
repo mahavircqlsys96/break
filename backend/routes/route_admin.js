@@ -15,6 +15,7 @@ const animalController = require('../controllers/admin/animalController');
 const hostResourceController = require('../controllers/admin/hostResourceController');
 const faqController = require('../controllers/admin/faqController');
 const promoCodeController = require('../controllers/admin/promoCodeController');
+const settingsController = require('../controllers/admin/settingsController');
 const propertiesController = require('../controllers/apis/propertiesController');
 // ─── Public Admin Routes ───
 router.post('/auth/login', authController.login);
@@ -121,5 +122,9 @@ router.put('/promoCodes/:id', promoCodeController.update);
 router.delete('/promoCodes/:id', promoCodeController.delete);
 router.put('/promoCodes/:id/toggle', promoCodeController.toggleStatus);
 router.post('/promoCodes/validate', promoCodeController.validatePromo);
+
+// Settings
+router.get('/settings', settingsController.getSettings);
+router.put('/settings', settingsController.updateSettings);
 
 module.exports = router;

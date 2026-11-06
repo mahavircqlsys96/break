@@ -23,7 +23,9 @@ import {
   CalendarCheck,
   Coins,
   Home,
+  TrendingUp,
   Users,
+  Wallet,
 } from "lucide-react";
 import { Button, Photo, StatusBadge } from "@/components/ui";
 import { bookingService, dashboardService, propertyService } from "@/services";
@@ -334,11 +336,30 @@ export function DashboardPage() {
         </button>
       </div>
 
-      {/* 4 Top Stat Cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {/* Card 1: Gross booking value */}
+      {/* 5 Top Stat Cards */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+        {/* Card 1: Admin Earnings */}
+        <div className="card flex items-start gap-3.5 p-5 border-indigo-200/60 bg-gradient-to-br from-white to-indigo-50/30 shadow-xs">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-[#5B50A0]/10 text-[#5B50A0]">
+            <Wallet className="size-5" />
+          </span>
+          <div className="min-w-0">
+            <p className="text-xs font-semibold text-indigo-900/80">
+              Admin Earnings
+            </p>
+            <p className="mt-0.5 truncate text-2xl font-bold tracking-tight text-[#2A2542]">
+              {aed(commissionVal)}
+            </p>
+            <p className="mt-1 flex items-center gap-1 text-[11px] text-emerald-700 font-medium">
+              <TrendingUp className="size-3 text-emerald-600" />
+              <span>Platform commission</span>
+            </p>
+          </div>
+        </div>
+
+        {/* Card 2: Gross booking value */}
         <div className="card flex items-start gap-3.5 p-5">
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-accent-soft text-accent">
             <Coins className="size-5" />
           </span>
           <div className="min-w-0">
@@ -349,28 +370,28 @@ export function DashboardPage() {
               {aed(revenueVal)}
             </p>
             <p className="mt-1 text-[11px] text-ink-muted">
-              Break earnings {aed(commissionVal)}
+              All bookings total
             </p>
           </div>
         </div>
 
-        {/* Card 2: Bookings */}
+        {/* Card 3: Bookings */}
         <div className="card flex items-start gap-3.5 p-5">
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-success-soft text-success">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-success-soft text-success">
             <CalendarCheck className="size-5" />
           </span>
           <div className="min-w-0">
-            <p className="text-xs font-medium text-ink-muted">Bookings</p>
+            <p className="text-xs font-medium text-ink-muted">Total bookings</p>
             <p className="mt-0.5 truncate text-2xl font-bold tracking-tight text-ink">
               {bookingsCount}
             </p>
-            <p className="mt-1 text-[11px] text-ink-muted">All-time</p>
+            <p className="mt-1 text-[11px] text-ink-muted">All-time bookings</p>
           </div>
         </div>
 
-        {/* Card 3: Live properties */}
+        {/* Card 4: Live properties */}
         <div className="card flex items-start gap-3.5 p-5">
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-warning-soft text-[#B8740F]">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-warning-soft text-[#B8740F]">
             <Home className="size-5" />
           </span>
           <div className="min-w-0">
@@ -384,9 +405,9 @@ export function DashboardPage() {
           </div>
         </div>
 
-        {/* Card 4: Guests • Hosts */}
+        {/* Card 5: Guests • Hosts */}
         <div className="card flex items-start gap-3.5 p-5">
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-accent-soft text-accent">
             <Users className="size-5" />
           </span>
           <div className="min-w-0">

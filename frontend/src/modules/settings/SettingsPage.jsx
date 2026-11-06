@@ -49,7 +49,7 @@ export function SettingsPage() {
     <>
       <PageHeader
         title="Settings"
-        subtitle="Platform configuration, admin team and account requests."
+        subtitle="Platform configuration, admin profile and commission settings."
       />
       <ProfileTab />
     </>
@@ -71,7 +71,8 @@ function AppSettingsTab() {
     mutationFn: () => settingsService.update(form),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["settings"] });
-      toast("Settings saved");
+      qc.invalidateQueries({ queryKey: ["dashboard"] });
+      toast("Settings & commission saved successfully");
     },
   });
   if (!form) return null;
@@ -83,8 +84,100 @@ function AppSettingsTab() {
         : [...form.languages, l],
     });
 
+  const commRate = Number(form.commissionPercent ?? 15);
+  const hostRate = Math.max(0, 100 - commRate);
+
   return (
     <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+      {/* Admin Commission & Financial Rates */}
+      <Card title="Admin Commission & Financials">
+        <div className="space-y-4">
+          <Field
+            label="Admin Commission Percentage (%)"
+            hint="Break platform commission deducted from booking amount on completed reservations."
+          >
+            <div className="relative">
+              <Input
+                type="number"
+                min="0"
+                max="100"
+                step="0.5"
+                value={form.commissionPercent ?? 15}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    commissionPercent: parseFloat(e.target.value) || 0,
+                  })
+                }
+                className="pe-10 font-bold text-accent"
+              />
+              <span className="pointer-events-none absolute inset-y-0 end-0 flex items-center pe-3.5 text-sm font-bold text-accent">
+                %
+              </span>
+            </div>
+          </Field>
+
+          {/* Interactive Split Calculation Preview */}
+          <div className="rounded-2xl border border-line/70 bg-bg/60 p-4 space-y-2.5 text-xs">
+            <div className="flex items-center justify-between font-semibold text-ink">
+              <span>Split simulation (1,000 AED Booking)</span>
+              <span className="text-[11px] text-ink-muted">Auto-calculated</span>
+            </div>
+            <div className="flex items-center justify-between text-accent font-semibold bg-accent-soft/70 px-3 py-1.5 rounded-xl">
+              <span>Admin Commission ({commRate}%)</span>
+              <span>{(1000 * (commRate / 100)).toFixed(2)} AED</span>
+            </div>
+            <div className="flex items-center justify-between text-ink-muted px-3 py-1">
+              <span>Host Payout ({hostRate}%)</span>
+              <span className="font-semibold text-ink">{(1000 * (hostRate / 100)).toFixed(2)} AED</span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+            <Field label="Break Service Fee (%)" hint="Charged to guests">
+              <div className="relative">
+                <Input
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={form.serviceFeePercent ?? 10}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      serviceFeePercent: parseFloat(e.target.value) || 0,
+                    })
+                  }
+                  className="pe-8"
+                />
+                <span className="pointer-events-none absolute inset-y-0 end-0 flex items-center pe-3 text-xs font-semibold text-ink-muted">
+                  %
+                </span>
+              </div>
+            </Field>
+
+            <Field label="VAT Rate (%)" hint="Standard UAE VAT">
+              <div className="relative">
+                <Input
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={form.vatPercent ?? 5}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      vatPercent: parseFloat(e.target.value) || 0,
+                    })
+                  }
+                  className="pe-8"
+                />
+                <span className="pointer-events-none absolute inset-y-0 end-0 flex items-center pe-3 text-xs font-semibold text-ink-muted">
+                  %
+                </span>
+              </div>
+            </Field>
+          </div>
+        </div>
+      </Card>
       <Card title="Support contact">
         <div className="space-y-4">
           <Field label="Support email">
@@ -501,10 +594,53 @@ function DeletionTab() {
 function ProfileTab() {
   const { admin, login, refresh } = useAuth(); // assume we could refresh, but usually admin context holds data.
   const toast = useToast();
+  const qc = useQueryClient();
   const [profile, setProfile] = useState({ name: admin?.name || "", email: admin?.email || "" });
   const [file, setFile] = useState(null);
   const [pw, setPw] = useState({ current: "", next: "", confirm: "" });
   const [showPw, setShowPw] = useState({ current: false, next: false, confirm: false });
+
+  // Commission settings state
+  const { data: settingsData } = useQuery({
+    queryKey: ["settings"],
+    queryFn: settingsService.get,
+  });
+
+  const [commRate, setCommRate] = useState(15);
+  const [serviceFee, setServiceFee] = useState(10);
+  const [vatRate, setVatRate] = useState(5);
+
+  useEffect(() => {
+    if (settingsData?.commissionPercent !== undefined) {
+      setCommRate(settingsData.commissionPercent);
+    } else if (admin?.admin_commission !== undefined) {
+      setCommRate(Number(admin.admin_commission));
+    }
+    if (settingsData?.serviceFeePercent !== undefined) {
+      setServiceFee(settingsData.serviceFeePercent);
+    }
+    if (settingsData?.vatPercent !== undefined) {
+      setVatRate(settingsData.vatPercent);
+    }
+  }, [settingsData, admin]);
+
+  const saveCommission = useMutation({
+    mutationFn: () =>
+      settingsService.update({
+        commissionPercent: commRate,
+        serviceFeePercent: serviceFee,
+        vatPercent: vatRate,
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["settings"] });
+      qc.invalidateQueries({ queryKey: ["dashboard"] });
+      toast("Admin commission percentage updated successfully!");
+    },
+    onError: () => {
+      toast("Failed to update commission");
+    },
+  });
+
   if (!admin) return null;
   const valid = pw.current && pw.next.length >= 8 && pw.next === pw.confirm;
 
@@ -666,6 +802,94 @@ function ProfileTab() {
           </div>
         </div>
       </Card>
+
+      {/* Admin Commission & Financials Card (below Change Password) */}
+      <div className="xl:col-span-2">
+        <Card title="Admin Commission & Financials">
+          <div className="space-y-4">
+            <Field
+              label="Admin Commission Percentage (%)"
+              hint="Break platform commission deducted from booking amount on completed reservations."
+            >
+              <div className="relative">
+                <Input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.5"
+                  value={commRate}
+                  onChange={(e) => setCommRate(parseFloat(e.target.value) || 0)}
+                  className="pe-10 font-bold text-accent"
+                />
+                <span className="pointer-events-none absolute inset-y-0 end-0 flex items-center pe-3.5 text-sm font-bold text-accent">
+                  %
+                </span>
+              </div>
+            </Field>
+
+            {/* Split simulation (1,000 AED Booking) */}
+            <div className="rounded-2xl border border-line/70 bg-bg/60 p-4 space-y-2.5 text-xs">
+              <div className="flex items-center justify-between font-semibold text-ink">
+                <span>Split simulation (1,000 AED Booking)</span>
+                <span className="text-[11px] text-ink-muted">Auto-calculated</span>
+              </div>
+              <div className="flex items-center justify-between text-accent font-semibold bg-accent-soft/70 px-3 py-1.5 rounded-xl">
+                <span>Admin Commission ({commRate}%)</span>
+                <span>{(1000 * (commRate / 100)).toFixed(2)} AED</span>
+              </div>
+              <div className="flex items-center justify-between text-ink-muted px-3 py-1">
+                <span>Host Payout ({Math.max(0, 100 - commRate)}%)</span>
+                <span className="font-semibold text-ink">
+                  {(1000 * (Math.max(0, 100 - commRate) / 100)).toFixed(2)} AED
+                </span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Field label="Break Service Fee (%)" hint="Charged to guests">
+                <div className="relative">
+                  <Input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={serviceFee}
+                    onChange={(e) => setServiceFee(parseFloat(e.target.value) || 0)}
+                    className="pe-8"
+                  />
+                  <span className="pointer-events-none absolute inset-y-0 end-0 flex items-center pe-3 text-xs font-semibold text-ink-muted">
+                    %
+                  </span>
+                </div>
+              </Field>
+
+              <Field label="VAT Rate (%)" hint="Standard UAE VAT">
+                <div className="relative">
+                  <Input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={vatRate}
+                    onChange={(e) => setVatRate(parseFloat(e.target.value) || 0)}
+                    className="pe-8"
+                  />
+                  <span className="pointer-events-none absolute inset-y-0 end-0 flex items-center pe-3 text-xs font-semibold text-ink-muted">
+                    %
+                  </span>
+                </div>
+              </Field>
+            </div>
+
+            <div className="flex justify-end pt-2">
+              <Button
+                loading={saveCommission.isPending}
+                onClick={() => saveCommission.mutate()}
+              >
+                Save commission
+              </Button>
+            </div>
+          </div>
+        </Card>
+      </div>
     </div>
   );
 }

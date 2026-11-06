@@ -34,9 +34,18 @@ module.exports = {
         db.reportUser ? db.reportUser.count({ where: { status: 'Pending' } }).catch(() => 0) : Promise.resolve(0),
       ]);
 
+      const grossBookingRow = await db.bookings.findOne({
+        attributes: [
+          [fn('COALESCE', fn('SUM', col('amount')), 0), 'grossTotal'],
+          [fn('COALESCE', fn('SUM', col('adminCommission')), 0), 'commissionTotal']
+        ],
+        where: { status: { [Op.notIn]: ['Cancelled', 'Rejected'] } },
+        raw: true,
+      });
+
       const totalRevenueRow = await db.bookings.findOne({
         attributes: [[fn('COALESCE', fn('SUM', col('adminCommission')), 0), 'total']],
-        where: { status: 'Completed' },
+        where: { status: { [Op.in]: ['Completed', 'Confirmed'] } },
         raw: true,
       });
 
@@ -44,7 +53,7 @@ module.exports = {
       const monthlyRevenueRow = await db.bookings.findOne({
         attributes: [[fn('COALESCE', fn('SUM', col('adminCommission')), 0), 'total']],
         where: {
-          status: 'Completed',
+          status: { [Op.in]: ['Completed', 'Confirmed'] },
           createdAt: {
             [Op.gte]: new Date(now.getFullYear(), now.getMonth(), 1),
             [Op.lt]: new Date(now.getFullYear(), now.getMonth() + 1, 1),
@@ -95,7 +104,9 @@ module.exports = {
           liveProperties: Number(liveProperties || 0),
           pendingProperties: Number(pendingProperties || 0),
           openReports: Number(openReports || 0),
-          totalRevenue: Number(totalRevenueRow?.total || 0),
+          totalRevenue: Number(grossBookingRow?.grossTotal || totalRevenueRow?.total || 0),
+          grossBookingValue: Number(grossBookingRow?.grossTotal || 0),
+          adminEarnings: Number(grossBookingRow?.commissionTotal || totalRevenueRow?.total || 0),
           monthlyRevenue: Number(monthlyRevenueRow?.total || 0),
           averageBookingValue: Number(avgBookingValueRow?.avgValue || 0),
         },

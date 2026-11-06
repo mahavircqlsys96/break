@@ -6,9 +6,11 @@ import {
   Baby,
   CalendarDays,
   CheckCircle2,
+  Coins,
   CreditCard,
   Download,
   PawPrint,
+  Percent,
   Receipt,
   Ticket,
   Users,
@@ -85,6 +87,30 @@ function downloadOnlyReceipt(b, guest, property) {
     b.vat > 0
       ? `<div style="display:flex;justify-content:space-between;color:#716e7f;margin-top:3px;"><span>VAT</span><span>${aed(b.vat)}</span></div>`
       : "";
+
+  const storedComm = typeof localStorage !== "undefined" ? parseFloat(localStorage.getItem("break_admin_commission") || "15") : 15;
+  const commPercent = Number(b.commissionPercent || storedComm || 15);
+  const adminCommission = Number(
+    b.adminCommission !== undefined && b.adminCommission > 0
+      ? b.adminCommission
+      : Math.round((b.subtotal || b.amount || 0) * (commPercent / 100))
+  );
+  const hostPayout = Number(
+    b.hostAmount !== undefined && b.hostAmount > 0
+      ? b.hostAmount
+      : Math.max(0, (b.subtotal || b.amount || 0) - adminCommission)
+  );
+
+  const commissionSection = `
+    <div style="display:flex;justify-content:space-between;align-items:center;color:#4338ca;font-weight:600;background:#eef2ff;padding:5px 8px;border-radius:8px;margin:4px 0;">
+      <span>💼 Admin commission (${commPercent}%)</span>
+      <span>${aed(adminCommission)}</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;color:#716e7f;font-size:11px;padding:2px 4px;margin-bottom:2px;">
+      <span>Host payout</span>
+      <span style="font-weight:600;color:#1e1b2e;">${aed(hostPayout)}</span>
+    </div>
+  `;
 
   try {
     const printWindow = window.open("", "_blank", "width=450,height=720");
@@ -197,6 +223,8 @@ function downloadOnlyReceipt(b, guest, property) {
                 ${vat}
               </div>
               <div class="divider"></div>
+              ${commissionSection}
+              <div class="divider"></div>
               <div class="total"><span>Total paid</span><span>${total}</span></div>
               <div class="pay-box">
                 <div class="card-icon">💳</div>
@@ -268,6 +296,19 @@ function BookingReceiptCard({ booking: b, guest, property, onDownload }) {
     property?.permitNumber ||
     b.holidayHomePermitNumber ||
     "DET 1234567";
+
+  const storedComm = typeof localStorage !== "undefined" ? parseFloat(localStorage.getItem("break_admin_commission") || "15") : 15;
+  const commPercent = Number(b.commissionPercent || storedComm || 15);
+  const adminCommission = Number(
+    b.adminCommission !== undefined && b.adminCommission > 0
+      ? b.adminCommission
+      : Math.round((b.subtotal || b.amount || 0) * (commPercent / 100))
+  );
+  const hostPayout = Number(
+    b.hostAmount !== undefined && b.hostAmount > 0
+      ? b.hostAmount
+      : Math.max(0, (b.subtotal || b.amount || 0) - adminCommission)
+  );
 
   return (
     <div
@@ -387,6 +428,21 @@ function BookingReceiptCard({ booking: b, guest, property, onDownload }) {
         <span className="font-display font-bold text-xl text-ink">
           {aed(b.total)}
         </span>
+      </div>
+
+      {/* Admin Commission & Host Payout split */}
+      <div className="mt-3.5 rounded-2xl border border-indigo-100 bg-indigo-50/70 p-3 space-y-1.5 text-xs">
+        <div className="flex items-center justify-between text-indigo-700 font-semibold">
+          <span className="inline-flex items-center gap-1.5">
+            <Coins className="size-3.5" />
+            Admin commission ({commPercent}%)
+          </span>
+          <span>{aed(adminCommission)}</span>
+        </div>
+        <div className="flex items-center justify-between text-[11px] text-ink-muted">
+          <span>Host payout</span>
+          <span className="font-semibold text-ink">{aed(hostPayout)}</span>
+        </div>
       </div>
 
       {/* Payment details box */}
@@ -626,6 +682,19 @@ export function BookingDetailPage() {
                 { label: "Cleaning fee", value: aed(b.cleaningFee) },
                 { label: "Break service fee", value: aed(b.serviceFee) },
                 { label: "VAT", value: aed(b.vat) },
+                {
+                  label: (
+                    <span className="inline-flex items-center gap-1.5 font-semibold text-indigo-700">
+                      <Coins className="size-3.5" />
+                      Admin commission ({b.commissionPercent || 15}%)
+                    </span>
+                  ),
+                  value: (
+                    <span className="font-bold text-indigo-700">
+                      {aed(b.adminCommission || Math.round((b.subtotal || 0) * ((b.commissionPercent || 15) / 100)))}
+                    </span>
+                  ),
+                },
               ]}
             />
             <div className="mt-2 flex items-center justify-between border-t border-line pt-3">

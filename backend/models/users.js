@@ -179,6 +179,20 @@ module.exports = function (sequelize, DataTypes) {
       allowNull: false,
       defaultValue: 'Not_Added'
     },
+    admin_commission: {
+      type: DataTypes.DECIMAL(5, 2),
+      allowNull: true,
+      defaultValue: 15.00
+    },
+    adminCommission: {
+      type: DataTypes.VIRTUAL,
+      get() {
+        return this.getDataValue('admin_commission');
+      },
+      set(val) {
+        this.setDataValue('admin_commission', val);
+      }
+    },
   }, {
     sequelize,
     tableName: 'users',
