@@ -37,3 +37,16 @@
     @apply flex h-11 w-full rounded-xl border border-line/70 bg-surface px-3.5 text-[14px] text-ink transition-colors placeholder:text-ink-muted/50 hover:border-accent/40 focus:border-accent focus:outline-none focus:ring-4 focus:ring-accent-soft disabled:cursor-not-allowed disabled:opacity-50;
   }
 }
+
+@media print {
+  body {
+    background: #ffffff !important;
+  }
+  aside,
+  header,
+  nav,
+  .no-print,
+  button:not(.allow-print) {
+    display: none !important;
+  }
+}

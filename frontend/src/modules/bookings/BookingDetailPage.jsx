@@ -31,6 +31,345 @@ import { bookingService } from "@/services";
 import { aed, date, dateTime, label } from "@/lib/format";
 import { BackLink } from "../BackLink";
 
+/**
+ * Generates and prints ONLY the clean official receipt card without any surrounding webpage or admin layout.
+ */
+function printOnlyReceipt(b, guest, property) {
+  const isPaid =
+    b.paymentStatus === "paid" ||
+    b.paymentStatus === "succeeded" ||
+    b.status === "confirmed" ||
+    b.status === "completed";
+
+  const invNumber =
+    b.invoiceNumber ||
+    `INV-2026-${String(b.code || b.id || "391447").replace(/[^0-9]/g, "").padStart(6, "0").slice(-6)}`;
+
+  const permitNumber =
+    property?.holidayHomePermitNumber ||
+    property?.permitNumber ||
+    b.holidayHomePermitNumber ||
+    "DET 1234567";
+
+  const guestName = b.guestName || guest?.name || "Abdulla";
+  const propertyName = b.propertyName || property?.name || "The Azure Waterfront Estate";
+  const bookingCode = b.code || "BRK-7905-MMUQ";
+  const dates = `${date(b.checkIn)} – ${date(b.checkOut)} · ${b.nights || 1} night${(b.nights || 1) > 1 ? "s" : ""}`;
+  const rateLine = `${aed(b.pricePerNight)} × ${b.nights || 1} nights`;
+  const subtotal = aed(b.subtotal);
+  const total = aed(b.total);
+  const statusLabel = isPaid ? "Paid" : label(b.paymentStatus || b.status);
+  const cardBrand = b.cardBrand || "Visa";
+  const cardLast4 = b.cardLast4 || "4582";
+  const chargedAt = dateTime(b.createdAt);
+
+  const promoSection = b.promoCode
+    ? `
+      <div class="row promo-row">
+        <span class="promo-label">🎟 Promo code (${b.promoCode})</span>
+        <span class="promo-value">-${aed(b.promoDiscount || b.discountAmount || 0)}</span>
+      </div>
+    `
+    : "";
+
+  const cleaningFee =
+    b.cleaningFee > 0
+      ? `<div class="row muted"><span>Cleaning fee</span><span>${aed(b.cleaningFee)}</span></div>`
+      : "";
+  const serviceFee =
+    b.serviceFee > 0
+      ? `<div class="row muted"><span>Break service fee</span><span>${aed(b.serviceFee)}</span></div>`
+      : "";
+  const vat =
+    b.vat > 0
+      ? `<div class="row muted"><span>VAT</span><span>${aed(b.vat)}</span></div>`
+      : "";
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8" />
+        <title>Receipt - ${bookingCode}</title>
+        <style>
+          @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap');
+          
+          @page {
+            size: auto;
+            margin: 10mm 12mm;
+          }
+          * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+          }
+          body {
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            color: #1e1b2e;
+            background: #ffffff;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 24px 0;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+          }
+          .receipt-ticket {
+            width: 380px;
+            max-width: 100%;
+            border: 1px solid #e5e7eb;
+            border-radius: 24px;
+            padding: 24px;
+            background: #ffffff;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+          }
+          .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+          }
+          .title {
+            font-family: 'Playfair Display', Georgia, serif;
+            font-size: 26px;
+            font-weight: 700;
+            color: #1a1727;
+            line-height: 1.1;
+          }
+          .inv-no {
+            margin-top: 4px;
+            font-size: 11px;
+            color: #716e7f;
+          }
+          .status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 3px 10px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 600;
+            ${
+              isPaid
+                ? "background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0;"
+                : "background: #fffbeb; color: #b45309; border: 1px solid #fde68a;"
+            }
+          }
+          .status-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            ${isPaid ? "background: #10b981;" : "background: #f59e0b;"}
+          }
+          .divider {
+            border-top: 1px solid #e5e7eb;
+            margin: 14px 0;
+          }
+          .details-list {
+            display: flex;
+            flex-direction: column;
+            gap: 9px;
+            font-size: 11.5px;
+          }
+          .row {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 12px;
+          }
+          .row.muted {
+            color: #716e7f;
+          }
+          .label {
+            color: #716e7f;
+            flex-shrink: 0;
+          }
+          .val {
+            font-weight: 500;
+            color: #1e1b2e;
+            text-align: right;
+            word-break: break-word;
+          }
+          .mono {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+          }
+          .promo-row {
+            color: #059669;
+            font-weight: 600;
+            background: #ecfdf5;
+            padding: 4px 8px;
+            border-radius: 8px;
+            margin: 2px 0;
+          }
+          .promo-label {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+          }
+          .total-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 2px;
+          }
+          .total-label {
+            font-family: 'Playfair Display', Georgia, serif;
+            font-size: 18px;
+            font-weight: 700;
+            color: #1a1727;
+          }
+          .total-val {
+            font-family: 'Playfair Display', Georgia, serif;
+            font-size: 20px;
+            font-weight: 700;
+            color: #1a1727;
+          }
+          .payment-box {
+            margin-top: 14px;
+            background: #faf9f6;
+            border: 1px solid #eceae4;
+            border-radius: 16px;
+            padding: 10px 12px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 11.5px;
+          }
+          .card-icon {
+            width: 32px;
+            height: 32px;
+            background: #ffffff;
+            border: 1px solid #e2dfd7;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+          }
+          .card-title {
+            font-weight: 600;
+            color: #1e1b2e;
+          }
+          .card-time {
+            font-size: 10px;
+            color: #716e7f;
+            margin-top: 2px;
+          }
+          .footer-trn {
+            margin-top: 16px;
+            text-align: center;
+            font-size: 9.5px;
+            color: #8c8997;
+            line-height: 1.4;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="receipt-ticket">
+          <div class="header">
+            <div>
+              <div class="title">Receipt</div>
+              <div class="inv-no">No. ${invNumber}</div>
+              <div class="inv-no">Issued ${date(b.createdAt)}</div>
+            </div>
+            <div class="status-pill">
+              <span class="status-dot"></span>
+              ${statusLabel}
+            </div>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="details-list">
+            <div class="row">
+              <span class="label">Billed to</span>
+              <span class="val">${guestName}</span>
+            </div>
+            <div class="row">
+              <span class="label">Booking</span>
+              <span class="val mono">${bookingCode}</span>
+            </div>
+            <div class="row">
+              <span class="label">Stay</span>
+              <span class="val">${propertyName}</span>
+            </div>
+            <div class="row">
+              <span class="label">Dates</span>
+              <span class="val">${dates}</span>
+            </div>
+            <div class="row">
+              <span class="label">Holiday home permit</span>
+              <span class="val mono">${permitNumber}</span>
+            </div>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="details-list">
+            <div class="row">
+              <span class="label">${rateLine}</span>
+              <span class="val">${subtotal}</span>
+            </div>
+            ${promoSection}
+            ${cleaningFee}
+            ${serviceFee}
+            ${vat}
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="total-row">
+            <div class="total-label">Total paid</div>
+            <div class="total-val">${total}</div>
+          </div>
+
+          <div class="payment-box">
+            <div class="card-icon">💳</div>
+            <div>
+              <div class="card-title">${cardBrand} •••• ${cardLast4}</div>
+              <div class="card-time">Charged ${chargedAt}</div>
+            </div>
+          </div>
+
+          <div class="footer-trn">
+            Break Technologies LLC · Abu Dhabi, UAE - TRN 100 4827 5310 0003
+          </div>
+        </div>
+
+        <script>
+          window.onload = function() {
+            setTimeout(function() {
+              window.focus();
+              window.print();
+            }, 250);
+          };
+        </script>
+      </body>
+    </html>
+  `;
+
+  // Create an invisible iframe attached to body
+  const iframe = document.createElement("iframe");
+  iframe.style.position = "fixed";
+  iframe.style.right = "0";
+  iframe.style.bottom = "0";
+  iframe.style.width = "0";
+  iframe.style.height = "0";
+  iframe.style.border = "0";
+  document.body.appendChild(iframe);
+
+  const doc = iframe.contentWindow.document;
+  doc.open();
+  doc.write(html);
+  doc.close();
+
+  // Remove the iframe after the print dialog finishes
+  setTimeout(() => {
+    try {
+      document.body.removeChild(iframe);
+    } catch {}
+  }, 60000);
+}
+
 function BookingReceiptCard({ booking: b, guest, property, onDownload }) {
   const isPaid =
     b.paymentStatus === "paid" ||
@@ -49,7 +388,10 @@ function BookingReceiptCard({ booking: b, guest, property, onDownload }) {
     "DET 1234567";
 
   return (
-    <div className="rounded-3xl border border-line/70 bg-white p-6 shadow-sm max-w-sm w-full mx-auto font-sans text-ink">
+    <div
+      id="printable-receipt"
+      className="rounded-3xl border border-line/70 bg-white p-6 shadow-sm max-w-sm w-full mx-auto font-sans text-ink"
+    >
       {/* Header */}
       <div className="flex items-start justify-between gap-3">
         <div>
@@ -185,11 +527,11 @@ function BookingReceiptCard({ booking: b, guest, property, onDownload }) {
         Break Technologies LLC · Abu Dhabi, UAE - TRN 100 4827 5310 0003
       </p>
 
-      {/* Download PDF button */}
+      {/* Download PDF button (Hidden in actual printout) */}
       <button
         type="button"
         onClick={onDownload}
-        className="mt-5 w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-[#5B50A0] hover:bg-[#4d4389] py-3.5 text-sm font-semibold text-white shadow-sm transition active:scale-[0.99]"
+        className="no-print mt-5 w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-[#5B50A0] hover:bg-[#4d4389] py-3.5 text-sm font-semibold text-white shadow-sm transition active:scale-[0.99]"
       >
         <Download className="size-4" />
         Download PDF
@@ -229,8 +571,8 @@ export function BookingDetailPage() {
   const active = b.status === "pending" || b.status === "confirmed";
 
   const handleDownloadPDF = () => {
-    toast("Opening print / PDF dialog...");
-    window.print();
+    toast("Preparing official receipt PDF...");
+    printOnlyReceipt(b, guest, property);
   };
 
   return (
@@ -247,6 +589,13 @@ export function BookingDetailPage() {
               onClick={() => setReceiptModal(true)}
             >
               View Receipt
+            </Button>
+            <Button
+              variant="secondary"
+              icon={<Download className="size-4" />}
+              onClick={handleDownloadPDF}
+            >
+              Download Receipt PDF
             </Button>
             {b.status === "pending" && (
               <Button
@@ -354,7 +703,7 @@ export function BookingDetailPage() {
             </Card>
           )}
 
-          {/* Embedded Receipt Card for Easy Printing / Export */}
+          {/* Embedded Receipt Card for Review / Export */}
           <Card title="Tax Invoice & Booking Receipt">
             <div className="flex flex-col items-center justify-center p-2">
               <BookingReceiptCard
@@ -432,14 +781,21 @@ export function BookingDetailPage() {
               <StatusBadge status={b.paymentStatus} />
             </div>
 
-            <div className="mt-4 pt-3 border-t border-line/70">
+            <div className="mt-4 pt-3 border-t border-line/70 flex gap-2">
               <Button
                 variant="secondary"
-                className="w-full"
+                className="flex-1"
                 icon={<Receipt className="size-4" />}
                 onClick={() => setReceiptModal(true)}
               >
-                View full receipt
+                View receipt
+              </Button>
+              <Button
+                className="flex-1 bg-[#5B50A0] hover:bg-[#4d4389] text-white"
+                icon={<Download className="size-4" />}
+                onClick={handleDownloadPDF}
+              >
+                PDF Receipt
               </Button>
             </div>
           </Card>
