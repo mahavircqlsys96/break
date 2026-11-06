@@ -52,7 +52,7 @@ const reportView = (r) => ({
 });
 
 const newest = (list) =>
-  [...list].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  [...list].sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
 
 // ---------- auth ----------
 
@@ -647,6 +647,8 @@ export const bookingService = {
             propertyPhoto: b.property?.propertiesPhotos?.[0]?.image ? (b.property.propertiesPhotos[0].image.startsWith('http') ? b.property.propertiesPhotos[0].image : import.meta.env.VITE_IMAGE_BASE + (b.property.propertiesPhotos[0].image.startsWith('/') ? b.property.propertiesPhotos[0].image.substring(1) : b.property.propertiesPhotos[0].image)) : 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?q=80&w=2070&auto=format&fit=crop',
             hostName: b.property?.host?.name || '—',
             total: b.total || b.amount || 0,
+            promoCode: b.promoCode || null,
+            promoDiscount: Number(b.promoDiscount || 0),
             status: b.status ? String(b.status).toLowerCase() : 'pending',
             paymentStatus: b.paymentStatus ? String(b.paymentStatus).toLowerCase() : 'pending',
             checkIn: b.bookingDates?.[0]?.checkIn || b.bookingDates?.[0]?.date || new Date().toISOString(),
@@ -686,6 +688,9 @@ export const bookingService = {
             transactionId: b.payment?.transactionId,
             paidAt: b.payment?.createdAt,
             cardLast4: b.payment?.cardLast4 || "0000",
+            promoCode: b.promoCode || null,
+            promoDiscount: Number(b.promoDiscount || b.discountAmount || 0),
+            originalAmount: Number(b.originalAmount || b.subtotal || b.amount || 0),
             checkIn: b.bookingDates?.[0]?.checkIn || b.bookingDates?.[0]?.date || new Date().toISOString(),
             checkOut: b.bookingDates?.[0]?.checkOut || b.bookingDates?.[b.bookingDates?.length - 1]?.date || new Date().toISOString(),
           },
@@ -787,6 +792,12 @@ const mapToFrontend = (path, item) => {
       active: item.status !== undefined ? item.status === "Active" : !!item.active,
     };
   }
+  if (path === "promoCodes") {
+    return {
+      ...item,
+      active: item.status !== undefined ? item.status === "Active" : !!item.active,
+    };
+  }
   return item;
 };
 
@@ -823,6 +834,13 @@ const mapToBackend = (path, input) => {
       targetAudience: input.targetAudience || "Host",
       sortOrder: input.sortOrder !== undefined ? parseInt(input.sortOrder) : 0,
       status: input.active ? "Active" : "Inactive",
+    };
+  }
+  if (path === "promoCodes") {
+    return {
+      ...input,
+      code: input.code ? String(input.code).trim().toUpperCase() : undefined,
+      status: input.active !== undefined ? (input.active ? "Active" : "Inactive") : (input.status || "Active"),
     };
   }
   return input;
@@ -870,6 +888,97 @@ export const masterData = {
   propertyTypes: crud("propertyTypes", db.propertyTypes, "pt"),
   hostResources: crud("hostResources", db.hostResources || [], "hr"),
   faqs: crud("faqs", db.faqs || [], "faq"),
+  promoCodes: crud("promoCodes", db.promoCodes || [], "promo"),
+};
+
+// ---------- promo codes ----------
+
+export const promoCodeService = {
+  list: (q) =>
+    api.get(
+      "/admin/promoCodes",
+      () =>
+        paginate(newest(db.promoCodes || []), q, {
+          search: [(p) => p.code, (p) => p.title, (p) => p.description],
+          filters: {
+            status: (p, v) => p.status?.toLowerCase() === String(v).toLowerCase(),
+            discountType: (p, v) => p.discountType === v,
+          },
+        }),
+      q,
+    ).then((res) => {
+      if (res && res.success !== undefined) {
+        const body = res.body || {};
+        const items = body.list || body.data || (Array.isArray(body) ? body : []);
+        return {
+          items: items.map((p) => ({
+            ...p,
+            active: p.status === "Active",
+          })),
+          total: body.total || items.length,
+          page: body.currentPage || 1,
+          pageSize: q?.pageSize || 10,
+        };
+      }
+      return res;
+    }),
+  get: (id) =>
+    api.get(`/admin/promoCodes/${id}`, () =>
+      findOr404(db.promoCodes || [], id)
+    ).then((res) => (res && res.body ? res.body : res)),
+  create: (input) =>
+    api.post("/admin/promoCodes", input, () => {
+      const item = {
+        ...input,
+        id: newId("promo"),
+        code: String(input.code).trim().toUpperCase(),
+        usedCount: 0,
+        status: input.active === false ? "Inactive" : "Active",
+        createdAt: new Date().toISOString(),
+      };
+      (db.promoCodes = db.promoCodes || []).unshift(item);
+      return item;
+    }).then((res) => (res && res.body ? res.body : res)),
+  update: (id, input) =>
+    api.put(`/admin/promoCodes/${id}`, input, () =>
+      patchIn(db.promoCodes || [], id, {
+        ...input,
+        code: input.code ? String(input.code).trim().toUpperCase() : undefined,
+        status: input.active !== undefined ? (input.active ? "Active" : "Inactive") : input.status,
+      })
+    ).then((res) => (res && res.body ? res.body : res)),
+  remove: (id) =>
+    api.del(`/admin/promoCodes/${id}`, () =>
+      removeFrom(db.promoCodes || [], id)
+    ).then((res) => (res && res.body ? res.body : res)),
+  toggleStatus: (id) =>
+    api.put(`/admin/promoCodes/${id}/toggle`, {}, () => {
+      const item = findOr404(db.promoCodes || [], id);
+      item.status = item.status === "Active" ? "Inactive" : "Active";
+      return item;
+    }).then((res) => (res && res.body ? res.body : res)),
+  validate: (code, bookingAmount) =>
+    api.post("/admin/promoCodes/validate", { code, bookingAmount }, () => {
+      const promo = (db.promoCodes || []).find(
+        (p) => p.code?.toUpperCase() === String(code).trim().toUpperCase()
+      );
+      if (!promo) throw new ApiError("Invalid promo code", 400);
+      if (promo.status !== "Active") throw new ApiError("Promo code is inactive", 400);
+      const amount = parseFloat(bookingAmount) || 0;
+      let discount = 0;
+      if (promo.discountType === "percentage") {
+        discount = (amount * parseFloat(promo.discountValue)) / 100;
+        if (promo.maxDiscount) discount = Math.min(discount, parseFloat(promo.maxDiscount));
+      } else {
+        discount = parseFloat(promo.discountValue);
+      }
+      discount = Math.min(discount, amount);
+      return {
+        promoCode: promo.code,
+        discountAmount: discount,
+        finalAmount: Math.max(0, amount - discount),
+      };
+    }),
 };
 
 // ---------- moderation ----------

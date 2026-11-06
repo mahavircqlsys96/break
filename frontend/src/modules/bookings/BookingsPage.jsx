@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { CalendarX, PawPrint, ChevronRight } from "lucide-react";
+import { CalendarX, PawPrint, ChevronRight, Ticket } from "lucide-react";
 import {
   DataTable,
   EmptyState,
@@ -141,9 +141,17 @@ export function BookingsPage() {
               header: "Total",
               sortable: true,
               render: (b) => (
-                <span className="whitespace-nowrap font-semibold">
-                  {aed(b.total)}
-                </span>
+                <div className="flex flex-col">
+                  <span className="whitespace-nowrap font-semibold">
+                    {aed(b.total)}
+                  </span>
+                  {b.promoCode && (
+                    <span className="mt-0.5 inline-flex items-center gap-1 font-mono text-[10px] font-semibold text-emerald-600">
+                      <Ticket className="size-2.5" />
+                      {b.promoCode}
+                    </span>
+                  )}
+                </div>
               ),
             },
             {

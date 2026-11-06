@@ -11,21 +11,61 @@ export const aed = (n) =>
 export const compact = (n) =>
   Number(n || 0).toLocaleString("en", { notation: "compact", maximumFractionDigits: 1 });
 
-export const date = (iso) => (iso ? format(parseISO(iso), "d MMM yyyy") : "—");
-export const dateTime = (iso) =>
-  iso ? format(parseISO(iso), "d MMM yyyy, HH:mm") : "—";
-export const dateRange = (from, to) => {
-  const a = parseISO(from);
-  const b = parseISO(to);
-  return a.getFullYear() === b.getFullYear()
-    ? `${format(a, "d MMM")} – ${format(b, "d MMM yyyy")}`
-    : `${format(a, "d MMM yyyy")} – ${format(b, "d MMM yyyy")}`;
+const toSafeDate = (val) => {
+  if (!val) return null;
+  try {
+    const d = typeof val === "string" ? parseISO(val) : new Date(val);
+    return isNaN(d.getTime()) ? null : d;
+  } catch {
+    return null;
+  }
 };
+
+export const date = (iso) => {
+  const d = toSafeDate(iso);
+  if (!d) return "—";
+  try {
+    return format(d, "d MMM yyyy");
+  } catch {
+    return "—";
+  }
+};
+
+export const dateTime = (iso) => {
+  const d = toSafeDate(iso);
+  if (!d) return "—";
+  try {
+    return format(d, "d MMM yyyy, HH:mm");
+  } catch {
+    return "—";
+  }
+};
+
+export const dateRange = (from, to) => {
+  const a = toSafeDate(from);
+  const b = toSafeDate(to);
+  if (!a && !b) return "—";
+  if (!b) return date(from);
+  if (!a) return date(to);
+  try {
+    return a.getFullYear() === b.getFullYear()
+      ? `${format(a, "d MMM")} – ${format(b, "d MMM yyyy")}`
+      : `${format(a, "d MMM yyyy")} – ${format(b, "d MMM yyyy")}`;
+  } catch {
+    return "—";
+  }
+};
+
 export const ago = (iso) => {
-  const d = parseISO(iso);
-  return Math.abs(differenceInCalendarDays(new Date(), d)) > 30
-    ? date(iso)
-    : `${formatDistanceToNowStrict(d)} ago`;
+  const d = toSafeDate(iso);
+  if (!d) return "—";
+  try {
+    return Math.abs(differenceInCalendarDays(new Date(), d)) > 30
+      ? date(iso)
+      : `${formatDistanceToNowStrict(d)} ago`;
+  } catch {
+    return "—";
+  }
 };
 
 export const label = (s) =>

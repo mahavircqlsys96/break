@@ -19,6 +19,7 @@ var _wishlists = require("./wishlists");
 var _propertiesAnimals = require("./propertiesAnimals");
 var _hostResources = require("./hostResources");
 var _faqs = require("./faqs");
+var _promoCodes = require("./promoCodes");
 
 
 function initModels(sequelize) {
@@ -42,6 +43,7 @@ function initModels(sequelize) {
   var wishlists = _wishlists(sequelize, DataTypes);
   var hostResources = _hostResources(sequelize, DataTypes);
   var faqs = _faqs(sequelize, DataTypes);
+  var promoCodes = _promoCodes(sequelize, DataTypes);
 
   // model: propertyTypes,
   //         as: "propertyType",
@@ -124,7 +126,8 @@ function initModels(sequelize) {
     wishlists,
     propertiesAnimals,
     hostResources,
-    faqs
+    faqs,
+    promoCodes
   };
 }
 module.exports = initModels;

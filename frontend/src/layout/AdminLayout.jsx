@@ -29,11 +29,13 @@ import {
   PawPrint,
   BookOpen,
   HelpCircle,
+  Ticket,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { Logo } from "@/components/Logo";
 import { Avatar, IconButton } from "@/components/ui";
 import { useAuth } from "@/auth/AuthContext";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 const NAV = [
   {
@@ -60,6 +62,7 @@ const NAV = [
     group: "BOOKINGS & FINANCE",
     items: [
       { to: "/bookings", label: "Bookings", icon: CalendarCheck },
+      { to: "/promo-codes", label: "Promo Codes", icon: Ticket },
       { to: "/payments", label: "Payments", icon: CreditCard },
     ],
   },
@@ -234,7 +237,9 @@ export function AdminLayout() {
           </header>
         </div>
         <main className="flex-1 p-4 sm:p-6 lg:p-8">
-          <Outlet />
+          <ErrorBoundary>
+            <Outlet />
+          </ErrorBoundary>
         </main>
       </div>
     </div>

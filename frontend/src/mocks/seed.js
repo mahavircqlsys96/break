@@ -631,6 +631,89 @@ export const properties = PROPERTY_NAMES.map((name, i) => {
   };
 });
 
+export const promoCodes = [
+  {
+    id: "promo_1",
+    code: "WELCOME100",
+    title: "New User Welcome Gift",
+    description: "Flat AED 100 off on your first Break booking",
+    discountType: "fixed",
+    discountValue: 100,
+    minBookingAmount: 1000,
+    maxDiscount: 100,
+    startDate: "2026-01-01T00:00:00.000Z",
+    endDate: "2026-12-31T23:59:59.000Z",
+    usageLimit: 500,
+    usedCount: 84,
+    status: "Active",
+    createdAt: "2026-01-01T00:00:00.000Z",
+  },
+  {
+    id: "promo_2",
+    code: "BREAK20",
+    title: "Summer Vacation 20% Off",
+    description: "20% discount on desert camps and vacation homes",
+    discountType: "percentage",
+    discountValue: 20,
+    minBookingAmount: 1500,
+    maxDiscount: 500,
+    startDate: "2026-06-01T00:00:00.000Z",
+    endDate: "2026-11-30T23:59:59.000Z",
+    usageLimit: 200,
+    usedCount: 142,
+    status: "Active",
+    createdAt: "2026-05-15T10:00:00.000Z",
+  },
+  {
+    id: "promo_3",
+    code: "WEEKEND15",
+    title: "Weekend Getaway Deal",
+    description: "15% off for 2+ nights bookings",
+    discountType: "percentage",
+    discountValue: 15,
+    minBookingAmount: 800,
+    maxDiscount: 350,
+    startDate: "2026-09-01T00:00:00.000Z",
+    endDate: "2026-12-31T23:59:59.000Z",
+    usageLimit: 150,
+    usedCount: 67,
+    status: "Active",
+    createdAt: "2026-08-20T12:00:00.000Z",
+  },
+  {
+    id: "promo_4",
+    code: "LUXURY500",
+    title: "VIP Luxury Villa Discount",
+    description: "Flat AED 500 discount on bookings over AED 5,000",
+    discountType: "fixed",
+    discountValue: 500,
+    minBookingAmount: 5000,
+    maxDiscount: 500,
+    startDate: "2026-07-01T00:00:00.000Z",
+    endDate: "2026-12-31T23:59:59.000Z",
+    usageLimit: 50,
+    usedCount: 19,
+    status: "Active",
+    createdAt: "2026-06-25T08:00:00.000Z",
+  },
+  {
+    id: "promo_5",
+    code: "FALL10",
+    title: "Early Autumn Offer",
+    description: "10% off across all properties",
+    discountType: "percentage",
+    discountValue: 10,
+    minBookingAmount: 500,
+    maxDiscount: 200,
+    startDate: "2026-09-01T00:00:00.000Z",
+    endDate: "2026-10-31T23:59:59.000Z",
+    usageLimit: 100,
+    usedCount: 100,
+    status: "Inactive",
+    createdAt: "2026-08-30T10:00:00.000Z",
+  },
+];
+
 const livePropertyIds = properties
   .filter((p) => p.status === "live")
   .map((p) => p.id);
@@ -659,6 +742,16 @@ export const bookings = Array.from({ length: 140 }, (_, i) => {
   const cleaningFee = 150;
   const serviceFee = Math.round(subtotal * 0.1);
   const vat = Math.round((subtotal + cleaningFee + serviceFee) * 0.05);
+
+  const hasPromo = i % 3 === 0;
+  const promo = hasPromo
+    ? i % 6 === 0
+      ? { code: "BREAK20", discount: Math.round(subtotal * 0.2) }
+      : { code: "WELCOME100", discount: 100 }
+    : null;
+  const promoDiscount = promo ? Math.min(subtotal, promo.discount) : 0;
+  const total = Math.max(0, subtotal - promoDiscount) + cleaningFee + serviceFee + vat;
+
   return {
     id: `b_${pad(i + 1)}`,
     code: `BRK-${pad(24100 + i, 6)}`,
@@ -673,10 +766,13 @@ export const bookings = Array.from({ length: 140 }, (_, i) => {
     pets: property.petsAllowed ? int(0, 1) : 0,
     pricePerNight: property.pricePerNight,
     subtotal,
+    promoCode: promo ? promo.code : null,
+    promoDiscount,
+    originalAmount: subtotal,
     cleaningFee,
     serviceFee,
     vat,
-    total: subtotal + cleaningFee + serviceFee + vat,
+    total,
     status,
     paymentStatus: cancelled
       ? "refunded"

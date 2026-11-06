@@ -63,6 +63,21 @@ module.exports = function(sequelize, DataTypes) {
       allowNull: false,
       defaultValue: 1
     },
+    promoCode: {
+      type: DataTypes.STRING(50),
+      allowNull: true,
+      defaultValue: null
+    },
+    promoDiscount: {
+      type: DataTypes.DECIMAL(12,2),
+      allowNull: false,
+      defaultValue: 0.00
+    },
+    originalAmount: {
+      type: DataTypes.DECIMAL(12,2),
+      allowNull: false,
+      defaultValue: 0.00
+    },
     status: {
       type: DataTypes.ENUM('Pending','Confirmed','Cancelled','Completed','Rejected'),
       allowNull: false,

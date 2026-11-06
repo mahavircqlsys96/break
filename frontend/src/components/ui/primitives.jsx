@@ -101,7 +101,7 @@ export const Textarea = forwardRef(({ className, ...rest }, ref) => (
 ));
 Textarea.displayName = "Textarea";
 
-export const Select = forwardRef(({ className, options, ...rest }, ref) => (
+export const Select = forwardRef(({ className, options, children, ...rest }, ref) => (
   <select
     ref={ref}
     className={cn(
@@ -114,11 +114,13 @@ export const Select = forwardRef(({ className, options, ...rest }, ref) => (
     }}
     {...rest}
   >
-    {options.map((o) => (
-      <option key={o.value} value={o.value}>
-        {o.label}
-      </option>
-    ))}
+    {Array.isArray(options)
+      ? options.map((o) => (
+          <option key={o?.value ?? o} value={o?.value ?? o}>
+            {o?.label ?? o}
+          </option>
+        ))
+      : children}
   </select>
 ));
 Select.displayName = "Select";

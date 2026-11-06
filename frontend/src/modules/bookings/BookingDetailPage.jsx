@@ -7,6 +7,7 @@ import {
   CheckCircle2,
   CreditCard,
   PawPrint,
+  Ticket,
   Users,
   XCircle,
 } from "lucide-react";
@@ -179,6 +180,23 @@ export function BookingDetailPage() {
                   label: `${aed(b.pricePerNight)} × ${b.nights} nights`,
                   value: aed(b.subtotal),
                 },
+                ...(b.promoCode
+                  ? [
+                      {
+                        label: (
+                          <span className="inline-flex items-center gap-1.5 font-medium text-emerald-600">
+                            <Ticket className="size-3.5" />
+                            Promo discount ({b.promoCode})
+                          </span>
+                        ),
+                        value: (
+                          <span className="font-semibold text-emerald-600">
+                            -{aed(b.promoDiscount || b.discountAmount || 0)}
+                          </span>
+                        ),
+                      },
+                    ]
+                  : []),
                 { label: "Cleaning fee", value: aed(b.cleaningFee) },
                 { label: "Break service fee", value: aed(b.serviceFee) },
                 { label: "VAT", value: aed(b.vat) },
@@ -188,6 +206,31 @@ export function BookingDetailPage() {
               <span className="font-bold">Total</span>
               <span className="text-lg font-bold">{aed(b.total)}</span>
             </div>
+            {b.promoCode && (
+              <div className="mt-3.5 flex items-center justify-between rounded-xl border border-emerald-200/80 bg-emerald-50/70 p-3 text-xs">
+                <div className="flex items-center gap-2.5">
+                  <span className="flex size-7 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700">
+                    <Ticket className="size-3.5" />
+                  </span>
+                  <div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-mono font-bold tracking-wider text-emerald-900">
+                        {b.promoCode}
+                      </span>
+                      <span className="rounded-full bg-emerald-200/70 px-2 py-0.5 text-[10px] font-semibold text-emerald-800">
+                        Applied
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-emerald-700 mt-0.5">
+                      Coupon applied for this booking
+                    </p>
+                  </div>
+                </div>
+                <span className="font-bold text-emerald-700">
+                  -{aed(b.promoDiscount || b.discountAmount || 0)}
+                </span>
+              </div>
+            )}
             <div className="mt-4 flex items-center gap-3 rounded-2xl bg-bg p-3 text-[13px]">
               <CreditCard className="size-5 text-accent" />
               <span className="flex-1">{label(b.paymentMethod)}</span>

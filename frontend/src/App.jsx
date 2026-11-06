@@ -26,6 +26,7 @@ import { AmenitiesPage } from "./modules/properties/AmenitiesPage";
 import { AnimalsPage } from "./modules/properties/AnimalsPage";
 import { HostResourcesPage } from "./modules/resources/HostResourcesPage";
 import { FaqsPage } from "./modules/faqs/FaqsPage";
+import { PromoCodesPage } from "./modules/promo-codes/PromoCodesPage";
 
 export function App() {
   return (
@@ -47,6 +48,7 @@ export function App() {
       <Route path="friendly-animals" element={<AnimalsPage />} />
       <Route path="bookings" element={<BookingsPage />} />
       <Route path="bookings/:id" element={<BookingDetailPage />} />
+      <Route path="promo-codes" element={<PromoCodesPage />} />
       <Route path="payments" element={<PaymentsPage />} />
       <Route path="reviews" element={<ReviewsPage />} />
       <Route path="reports" element={<SupportPage />} />
