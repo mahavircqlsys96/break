@@ -457,6 +457,12 @@ export const guests = Array.from({ length: 64 }, (_, i) => {
     bookings: 0,
     wishlists: int(0, 6),
     totalSpent: 0,
+    verificationStatus: i < 50 ? "Verified" : i < 58 ? "Pending" : "Rejected",
+    idDocumentType: i % 3 === 0 ? "Emirates ID" : i % 3 === 1 ? "Passport" : "UAE Pass",
+    idDocumentNumber: i % 3 === 0 ? `784-199${i % 10}-${2000000 + i * 43}-1` : i % 3 === 1 ? `P${20000000 + i * 812}` : `UAE-PASS-${pad(i + 1)}`,
+    idDocumentFront: "https://images.unsplash.com/photo-1607344645866-009c320c5ab8?w=800&auto=format&fit=crop&q=80",
+    idDocumentBack: "https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=800&auto=format&fit=crop&q=80",
+    verificationNotes: i >= 58 ? "ID photo is blurry and Emirates ID expiry date cannot be verified." : null,
   };
 });
 

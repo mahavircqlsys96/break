@@ -1149,20 +1149,32 @@ module.exports = {
       const t = await properties.sequelize.transaction();
 
       try {
+        // Build update payload
+        const updatePayload = {
+          basicInfo: req.body.basicInfo,
+          propertyTypeId: req.body.propertyTypeId,
+          description: req.body.description,
+          location: req.body.location,
+          latitude: req.body.latitude,
+          longitude: req.body.longitude,
+          price: req.body.price,
+          bedroom: req.body.bedroom,
+          bathroom: req.body.bathroom,
+          guest: req.body.guest,
+        };
+
+        if (req.body.status !== undefined) {
+          const s = String(req.body.status).toLowerCase();
+          updatePayload.status = (s === 'live' || s === 'active') ? 'Active' : 'Inactive';
+        }
+
+        if (req.body.permitStatus !== undefined) {
+          updatePayload.permitStatus = req.body.permitStatus;
+        }
+
         // Update property
         await property.update(
-          {
-            basicInfo: req.body.basicInfo,
-            propertyTypeId: req.body.propertyTypeId,
-            description: req.body.description,
-            location: req.body.location,
-            latitude: req.body.latitude,
-            longitude: req.body.longitude,
-            price: req.body.price,
-            bedroom: req.body.bedroom,
-            bathroom: req.body.bathroom,
-            guest: req.body.guest,
-          },
+          updatePayload,
           {
             transaction: t,
           }

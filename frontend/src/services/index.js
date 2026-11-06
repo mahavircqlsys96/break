@@ -233,6 +233,13 @@ export const guestService = {
           gender: u.gender || 'Unknown',
           dob: u.dob || null,
           lastActiveAt: u.updatedAt || u.createdAt,
+          idDocumentType: u.idDocumentType || null,
+          idDocumentNumber: u.idDocumentNumber || null,
+          idDocumentFront: (u.idDocumentFront && (u.idDocumentFront.startsWith('http://') || u.idDocumentFront.startsWith('https://'))) ? u.idDocumentFront : (u.idDocumentFront ? import.meta.env.VITE_IMAGE_BASE + (u.idDocumentFront.startsWith('/') ? u.idDocumentFront.substring(1) : u.idDocumentFront) : null),
+          idDocumentBack: (u.idDocumentBack && (u.idDocumentBack.startsWith('http://') || u.idDocumentBack.startsWith('https://'))) ? u.idDocumentBack : (u.idDocumentBack ? import.meta.env.VITE_IMAGE_BASE + (u.idDocumentBack.startsWith('/') ? u.idDocumentBack.substring(1) : u.idDocumentBack) : null),
+          verificationStatus: u.verificationStatus || 'Unverified',
+          verificationNotes: u.verificationNotes || null,
+          verifiedAt: u.verifiedAt || null,
         },
         bookings: bookings.map(b => ({
           ...b,
@@ -261,6 +268,14 @@ export const guestService = {
   setStatus: (id, status) =>
     api.put(`/admin/toggleUserStatus/${id}`, { status }, () =>
       patchIn(db.guests, id, { status }),
+    ),
+  updateVerification: (id, verificationStatus, verificationNotes) =>
+    api.put('/admin/updateVerificationStatus', { id, verificationStatus, verificationNotes }, () =>
+      patchIn(db.guests, id, {
+        verificationStatus,
+        verificationNotes,
+        verified: verificationStatus === 'Verified',
+      }),
     ),
   remove: (id) =>
     api.del(`/admin/deleteUser/${id}`, () => removeFrom(db.guests, id)),
@@ -616,9 +631,9 @@ export const propertyService = {
     });
   },
   approve: (id) =>
-    propertyService.update(id, { status: "live", rejectionReason: undefined }),
+    propertyService.update(id, { status: "live", permitStatus: "Approved", rejectionReason: undefined }),
   reject: (id, reason) =>
-    propertyService.update(id, { status: "rejected", rejectionReason: reason }),
+    propertyService.update(id, { status: "rejected", permitStatus: "Rejected", rejectionReason: reason }),
   remove: (id) =>
     api.del(`/admin/properties/${id}`, () => removeFrom(db.properties, id)),
 };

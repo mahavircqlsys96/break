@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { Building2, LayoutGrid, List, Plus } from "lucide-react";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Building2, CheckCircle2, LayoutGrid, List, Plus } from "lucide-react";
 import {
   Button,
   DataTable,
@@ -14,6 +14,7 @@ import {
   StatusBadge,
   Tabs,
   Toolbar,
+  useToast,
 } from "@/components/ui";
 import { dashboardService, propertyService } from "@/services";
 import { useListQuery } from "@/lib/useListQuery";
@@ -33,6 +34,8 @@ const STATUS_TABS = [
 
 export function PropertiesPage() {
   const navigate = useNavigate();
+  const qc = useQueryClient();
+  const toast = useToast();
   const [params] = useSearchParams();
   const [view, setView] = useState("grid");
   const md = useMasterData();
@@ -41,6 +44,18 @@ export function PropertiesPage() {
     sortDir: "desc",
     pageSize: 12,
     filters: { status: params.get("status") ?? undefined },
+  });
+
+  const approveMutation = useMutation({
+    mutationFn: (id) => propertyService.approve(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["properties"] });
+      qc.invalidateQueries({ queryKey: ["dashboard"] });
+      toast("Property approved & published");
+    },
+    onError: (err) => {
+      toast(err.message || "Failed to approve property", "danger");
+    },
   });
   const { data, isFetching } = useQuery({
     queryKey: ["properties", list.query],
@@ -194,6 +209,34 @@ export function PropertiesPage() {
                 key: "status",
                 header: "Status",
                 render: (p) => <StatusBadge status={p.status} />,
+              },
+              {
+                key: "actions",
+                header: "",
+                render: (p) => {
+                  const s = String(p.status || "").toLowerCase();
+                  const isLive = s === "live" || s === "active";
+                  return (
+                    <div
+                      className="flex items-center justify-end gap-1.5"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {!isLive && (
+                        <Button
+                          size="sm"
+                          icon={<CheckCircle2 className="size-3.5" />}
+                          loading={
+                            approveMutation.isPending &&
+                            approveMutation.variables === p.id
+                          }
+                          onClick={() => approveMutation.mutate(p.id)}
+                        >
+                          Approve
+                        </Button>
+                      )}
+                    </div>
+                  );
+                },
               },
             ]}
           />

@@ -6,7 +6,10 @@ import {
   CalendarDays,
   CheckCircle2,
   CreditCard,
+  Download,
   PawPrint,
+  Printer,
+  Receipt,
   Ticket,
   Users,
   XCircle,
@@ -17,6 +20,7 @@ import {
   Card,
   ConfirmDialog,
   DetailList,
+  Modal,
   PageHeader,
   PageLoader,
   Photo,
@@ -24,18 +28,188 @@ import {
   useToast,
 } from "@/components/ui";
 import { bookingService } from "@/services";
-import { aed, dateTime, label } from "@/lib/format";
+import { aed, date, dateTime, label } from "@/lib/format";
 import { BackLink } from "../BackLink";
+
+function BookingReceiptCard({ booking: b, guest, property, onDownload }) {
+  const isPaid =
+    b.paymentStatus === "paid" ||
+    b.paymentStatus === "succeeded" ||
+    b.status === "confirmed" ||
+    b.status === "completed";
+
+  const invNumber =
+    b.invoiceNumber ||
+    `INV-2026-${String(b.code || b.id || "391447").replace(/[^0-9]/g, "").padStart(6, "0").slice(-6)}`;
+
+  const permitNumber =
+    property?.holidayHomePermitNumber ||
+    property?.permitNumber ||
+    b.holidayHomePermitNumber ||
+    "DET 1234567";
+
+  return (
+    <div className="rounded-3xl border border-line/70 bg-white p-6 shadow-sm max-w-sm w-full mx-auto font-sans text-ink">
+      {/* Header */}
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h2 className="font-display font-bold text-2xl text-ink leading-tight">
+            Receipt
+          </h2>
+          <p className="mt-1 text-xs text-ink-muted">No. {invNumber}</p>
+          <p className="text-xs text-ink-muted">Issued {date(b.createdAt)}</p>
+        </div>
+        <span
+          className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${
+            isPaid
+              ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+              : "bg-warning-soft text-[#B8740F] border border-warning/30"
+          }`}
+        >
+          <span
+            className={`size-1.5 rounded-full ${
+              isPaid ? "bg-emerald-500" : "bg-[#B8740F]"
+            }`}
+          />
+          {isPaid ? "Paid" : label(b.paymentStatus || b.status)}
+        </span>
+      </div>
+
+      <div className="my-4 border-t border-line/70" />
+
+      {/* Details list */}
+      <div className="space-y-2.5 text-xs">
+        <div className="flex items-start justify-between gap-2">
+          <span className="text-ink-muted">Billed to</span>
+          <span className="font-medium text-ink text-right">
+            {b.guestName || guest?.name || "Abdulla"}
+          </span>
+        </div>
+        <div className="flex items-start justify-between gap-2">
+          <span className="text-ink-muted">Booking</span>
+          <span className="font-mono font-medium text-ink">
+            {b.code || "BRK-7905-MMUQ"}
+          </span>
+        </div>
+        <div className="flex items-start justify-between gap-2">
+          <span className="text-ink-muted">Stay</span>
+          <span className="font-medium text-ink text-right max-w-[200px] truncate">
+            {b.propertyName || property?.name || "The Azure Waterfront Estate"}
+          </span>
+        </div>
+        <div className="flex items-start justify-between gap-2">
+          <span className="text-ink-muted">Dates</span>
+          <span className="font-medium text-ink text-right">
+            {date(b.checkIn)} – {date(b.checkOut)} · {b.nights || 1} nights
+          </span>
+        </div>
+        <div className="flex items-start justify-between gap-2">
+          <span className="text-ink-muted">Holiday home permit</span>
+          <span className="font-mono text-ink text-right">{permitNumber}</span>
+        </div>
+      </div>
+
+      <div className="my-4 border-t border-line/70" />
+
+      {/* Pricing Breakdown with Promo Code */}
+      <div className="space-y-2 text-xs">
+        <div className="flex items-center justify-between">
+          <span className="text-ink-muted">
+            {aed(b.pricePerNight)} × {b.nights || 1} nights
+          </span>
+          <span className="font-medium text-ink">{aed(b.subtotal)}</span>
+        </div>
+
+        {/* Promo code applied discount line */}
+        {b.promoCode && (
+          <div className="flex items-center justify-between text-emerald-600 font-medium bg-emerald-50/60 -mx-2 px-2 py-1 rounded-lg">
+            <span className="inline-flex items-center gap-1.5">
+              <Ticket className="size-3.5" />
+              Promo code ({b.promoCode})
+            </span>
+            <span className="font-semibold">
+              -{aed(b.promoDiscount || b.discountAmount || 0)}
+            </span>
+          </div>
+        )}
+
+        {b.cleaningFee > 0 && (
+          <div className="flex items-center justify-between text-ink-muted">
+            <span>Cleaning fee</span>
+            <span>{aed(b.cleaningFee)}</span>
+          </div>
+        )}
+
+        {b.serviceFee > 0 && (
+          <div className="flex items-center justify-between text-ink-muted">
+            <span>Break service fee</span>
+            <span>{aed(b.serviceFee)}</span>
+          </div>
+        )}
+
+        {b.vat > 0 && (
+          <div className="flex items-center justify-between text-ink-muted">
+            <span>VAT</span>
+            <span>{aed(b.vat)}</span>
+          </div>
+        )}
+      </div>
+
+      <div className="my-4 border-t border-line/70" />
+
+      {/* Total Paid */}
+      <div className="flex items-center justify-between">
+        <span className="font-display font-bold text-lg text-ink">Total paid</span>
+        <span className="font-display font-bold text-xl text-ink">
+          {aed(b.total)}
+        </span>
+      </div>
+
+      {/* Payment details box */}
+      <div className="mt-4 rounded-2xl border border-line/70 bg-bg/50 p-3 flex items-center gap-3 text-xs">
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-surface border border-line text-ink-muted shadow-xs">
+          <CreditCard className="size-4 text-accent" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="font-semibold text-ink">
+            {b.cardBrand || "Visa"} •••• {b.cardLast4 || "4582"}
+          </p>
+          <p className="text-[11px] text-ink-muted mt-0.5">
+            Charged {dateTime(b.createdAt)}
+          </p>
+        </div>
+      </div>
+
+      {/* LLC footer */}
+      <p className="mt-4 text-center text-[10.5px] leading-relaxed text-ink-muted">
+        Break Technologies LLC · Abu Dhabi, UAE - TRN 100 4827 5310 0003
+      </p>
+
+      {/* Download PDF button */}
+      <button
+        type="button"
+        onClick={onDownload}
+        className="mt-5 w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-[#5B50A0] hover:bg-[#4d4389] py-3.5 text-sm font-semibold text-white shadow-sm transition active:scale-[0.99]"
+      >
+        <Download className="size-4" />
+        Download PDF
+      </button>
+    </div>
+  );
+}
 
 export function BookingDetailPage() {
   const { id = "" } = useParams();
   const qc = useQueryClient();
   const toast = useToast();
   const [cancel, setCancel] = useState(false);
+  const [receiptModal, setReceiptModal] = useState(false);
+
   const { data, isLoading } = useQuery({
     queryKey: ["bookings", id],
     queryFn: () => bookingService.get(id),
   });
+
   const status = useMutation({
     mutationFn: ({ s, reason }) => bookingService.setStatus(id, s, reason),
     onSuccess: (b) => {
@@ -54,6 +228,11 @@ export function BookingDetailPage() {
   const { booking: b, guest, host, property } = data;
   const active = b.status === "pending" || b.status === "confirmed";
 
+  const handleDownloadPDF = () => {
+    toast("Opening print / PDF dialog...");
+    window.print();
+  };
+
   return (
     <>
       <PageHeader
@@ -62,6 +241,13 @@ export function BookingDetailPage() {
         subtitle={`Booked on ${dateTime(b.createdAt)}`}
         actions={
           <>
+            <Button
+              variant="secondary"
+              icon={<Receipt className="size-4" />}
+              onClick={() => setReceiptModal(true)}
+            >
+              View Receipt
+            </Button>
             {b.status === "pending" && (
               <Button
                 icon={<CheckCircle2 className="size-4" />}
@@ -98,37 +284,34 @@ export function BookingDetailPage() {
                   <div>
                     <Link
                       to={`/properties/${b.propertyId}`}
-                      className="font-display text-xl font-semibold hover:text-primary"
+                      className="font-display text-lg font-semibold hover:text-accent"
                     >
                       {b.propertyName}
                     </Link>
-                    <p className="text-[13px] text-ink-muted">
-                      {property?.area}, {b.cityName}
+                    <p className="mt-0.5 text-xs text-ink-muted">
+                      {b.cityName}
                     </p>
                   </div>
                   <StatusBadge status={b.status} />
                 </div>
-                <div className="mt-4 grid grid-cols-2 gap-3">
-                  <div className="rounded-2xl bg-bg p-3">
-                    <p className="text-xs text-ink-muted">Check-in</p>
-                    <p className="font-semibold">{dateTime(b.checkIn)}</p>
-                  </div>
-                  <div className="rounded-2xl bg-bg p-3">
-                    <p className="text-xs text-ink-muted">Check-out</p>
-                    <p className="font-semibold">{dateTime(b.checkOut)}</p>
-                  </div>
+                <div className="mt-4 flex items-center gap-2 text-[13px]">
+                  <CalendarDays className="size-4 text-ink-muted" />
+                  <span>
+                    {date(b.checkIn)} → {date(b.checkOut)}
+                  </span>
+                  <span className="text-ink-muted">
+                    ({b.nights} night{b.nights > 1 ? "s" : ""})
+                  </span>
                 </div>
               </div>
             </div>
-          </Card>
 
-          <Card title="Guests">
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div className="grid grid-cols-2 gap-3 border-t border-line/70 p-5 sm:grid-cols-4">
               {[
                 {
                   icon: Users,
                   label: "Adults",
-                  sub: "Ages 13+",
+                  sub: "Over 12 years",
                   value: b.adults,
                 },
                 {
@@ -140,13 +323,13 @@ export function BookingDetailPage() {
                 {
                   icon: PawPrint,
                   label: "Pets",
-                  sub: "Service animals incl.",
+                  sub: "Friendly animals",
                   value: b.pets,
                 },
                 {
                   icon: CalendarDays,
                   label: "Nights",
-                  sub: `${aed(b.pricePerNight)} / night`,
+                  sub: "Length of stay",
                   value: b.nights,
                 },
               ].map((g) => (
@@ -170,6 +353,18 @@ export function BookingDetailPage() {
               </p>
             </Card>
           )}
+
+          {/* Embedded Receipt Card for Easy Printing / Export */}
+          <Card title="Tax Invoice & Booking Receipt">
+            <div className="flex flex-col items-center justify-center p-2">
+              <BookingReceiptCard
+                booking={b}
+                guest={guest}
+                property={property}
+                onDownload={handleDownloadPDF}
+              />
+            </div>
+          </Card>
         </div>
 
         <div className="space-y-4">
@@ -236,7 +431,19 @@ export function BookingDetailPage() {
               <span className="flex-1">{label(b.paymentMethod)}</span>
               <StatusBadge status={b.paymentStatus} />
             </div>
+
+            <div className="mt-4 pt-3 border-t border-line/70">
+              <Button
+                variant="secondary"
+                className="w-full"
+                icon={<Receipt className="size-4" />}
+                onClick={() => setReceiptModal(true)}
+              >
+                View full receipt
+              </Button>
+            </div>
           </Card>
+
           {guest && (
             <Card title="Guest">
               <Link
@@ -253,6 +460,7 @@ export function BookingDetailPage() {
               </Link>
             </Card>
           )}
+
           {host && (
             <Card title="Host">
               <Link
@@ -272,6 +480,23 @@ export function BookingDetailPage() {
         </div>
       </div>
 
+      {/* Modal Dialog for Receipt Popup */}
+      <Modal
+        open={receiptModal}
+        onClose={() => setReceiptModal(false)}
+        title="Official Tax Receipt"
+        size="md"
+      >
+        <div className="py-2">
+          <BookingReceiptCard
+            booking={b}
+            guest={guest}
+            property={property}
+            onDownload={handleDownloadPDF}
+          />
+        </div>
+      </Modal>
+
       <ConfirmDialog
         open={cancel}
         onClose={() => setCancel(false)}
@@ -286,3 +511,5 @@ export function BookingDetailPage() {
     </>
   );
 }
+
+export default BookingDetailPage;

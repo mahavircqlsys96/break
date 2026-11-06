@@ -148,6 +148,13 @@ export function PropertyDetailPage() {
           }));
   const policy = md.policies.find((c) => c.id === p.cancellationPolicyId);
 
+  const statusStr = String(p.status || "").toLowerCase();
+  const isApproved =
+    statusStr === "live" ||
+    statusStr === "active" ||
+    p.status === "Active" ||
+    p.status === "Approved";
+
   return (
     <>
       <PageHeader
@@ -171,7 +178,7 @@ export function PropertyDetailPage() {
             >
               Edit
             </Button>
-            {p.status === "pending" && (
+            {!isApproved ? (
               <>
                 <Button
                   variant="danger-soft"
@@ -185,48 +192,89 @@ export function PropertyDetailPage() {
                   loading={approve.isPending}
                   onClick={() => approve.mutate()}
                 >
-                  Approve & publish
+                  Approve Property
                 </Button>
               </>
-            )}
-            {p.status === "live" && (
-              <Button
-                variant="secondary"
-                icon={<EyeOff className="size-4" />}
-                onClick={() => setDialog("unlist")}
-              >
-                Unlist
-              </Button>
-            )}
-            {(p.status === "unlisted" ||
-              p.status === "rejected" ||
-              p.status === "draft") && (
-              <Button
-                icon={<Eye className="size-4" />}
-                loading={approve.isPending}
-                onClick={() => approve.mutate()}
-              >
-                Publish
-              </Button>
+            ) : (
+              <>
+                <Button
+                  variant="secondary"
+                  className="border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                  icon={<CheckCircle2 className="size-4" />}
+                  loading={approve.isPending}
+                  onClick={() => approve.mutate()}
+                >
+                  Approved
+                </Button>
+                <Button
+                  variant="secondary"
+                  icon={<EyeOff className="size-4" />}
+                  onClick={() => setDialog("unlist")}
+                >
+                  Unlist
+                </Button>
+              </>
             )}
           </>
         }
       />
+
+      {/* Property Approval & Verification Status Banner */}
+      {!isApproved ? (
+        <div className="mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 rounded-2xl border border-warning/40 bg-warning-soft/70 p-4 text-[#8A5A0E]">
+          <div className="flex items-start gap-3">
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-warning/20 text-[#8A5A0E]">
+              <Clock className="size-5" />
+            </span>
+            <div>
+              <h3 className="font-bold text-sm text-ink">Property Pending Admin Approval</h3>
+              <p className="text-xs text-ink-muted mt-0.5">
+                This listing is currently <b className="capitalize text-ink">{p.status || "pending"}</b> and not live for guests.
+                Review pricing, photos, and holiday home permit before approving.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <Button
+              variant="danger-soft"
+              size="sm"
+              icon={<XCircle className="size-4" />}
+              onClick={() => setDialog("reject")}
+            >
+              Reject
+            </Button>
+            <Button
+              size="sm"
+              icon={<CheckCircle2 className="size-4" />}
+              loading={approve.isPending}
+              onClick={() => approve.mutate()}
+            >
+              Approve & Publish
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <div className="mb-6 flex items-center justify-between rounded-2xl border border-emerald-200/80 bg-emerald-50/70 p-3.5 text-xs text-emerald-800">
+          <div className="flex items-center gap-2.5">
+            <span className="flex size-8 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+              <CheckCircle2 className="size-4" />
+            </span>
+            <div>
+              <span className="font-bold text-emerald-900 block text-xs">Property Approved & Live</span>
+              <span className="text-[11px] text-emerald-700">This property is verified, active, and discoverable for guest bookings.</span>
+            </div>
+          </div>
+          <span className="rounded-full bg-emerald-200/80 px-2.5 py-1 text-[11px] font-semibold text-emerald-900">
+            Live on App
+          </span>
+        </div>
+      )}
 
       {p.status === "rejected" && p.rejectionReason && (
         <div className="mb-4 flex items-start gap-3 rounded-2xl border border-danger/20 bg-danger-soft px-4 py-3 text-[13px] text-danger">
           <XCircle className="mt-0.5 size-4 shrink-0" />
           <div>
             <b>Rejected:</b> {p.rejectionReason}
-          </div>
-        </div>
-      )}
-      {p.status === "pending" && (
-        <div className="mb-4 flex items-start gap-3 rounded-2xl border border-warning/30 bg-warning-soft px-4 py-3 text-[13px] text-[#8A5A0E]">
-          <Clock className="mt-0.5 size-4 shrink-0" />
-          <div>
-            Submitted by the host {ago(p.updatedAt)}. Check photos, location and
-            pricing before publishing.
           </div>
         </div>
       )}
@@ -537,6 +585,46 @@ export function PropertyDetailPage() {
                 </p>
               </div>
             </Link>
+          </Card>
+
+          <Card title="Holiday Home Permit">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-ink-muted">Permit Number</span>
+                <span className="font-mono font-bold text-ink">
+                  {p.holidayHomePermitNumber || p.permitNumber || "DET 1234567"}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-ink-muted">Permit Status</span>
+                <Badge
+                  tone={
+                    p.permitStatus === "Approved" || isApproved
+                      ? "success"
+                      : p.permitStatus === "Rejected"
+                      ? "danger"
+                      : "warning"
+                  }
+                  dot
+                >
+                  {p.permitStatus || (isApproved ? "Approved" : "Pending")}
+                </Badge>
+              </div>
+              {p.holidayHomePermitDoc && (
+                <a
+                  href={
+                    p.holidayHomePermitDoc.startsWith("http")
+                      ? p.holidayHomePermitDoc
+                      : `${import.meta.env.VITE_IMAGE_BASE || ""}${p.holidayHomePermitDoc}`
+                  }
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-2 block text-center text-xs font-semibold text-primary hover:underline"
+                >
+                  View Permit Document ↗
+                </a>
+              )}
+            </div>
           </Card>
 
           <Card title="Visibility">
