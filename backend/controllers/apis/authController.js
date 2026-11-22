@@ -114,7 +114,7 @@ module.exports = {
       const errors = await helper.checkValidation(v);
       if (errors) return helper.failed(res, errors);
 
-      const { countryCode, phone } = req.body;
+      const { countryCode, phone, deviceToken, deviceType } = req.body;
       const now = helper.unixTimestamp();
 
       let user = await users.findOne({ where: { countryCode, phone } });
@@ -131,15 +131,21 @@ module.exports = {
       }
 
       const otp = generateOtp();
+      const loginTime = helper.unixTimestamp();
       const otpData = {
         otp,
         otpVerify: "no_verify",
         otpExpiresAt: toDate(now + OTP_TTL_SECONDS),
         otpAttempts: 0,
+        loginTime,
+        ...(deviceToken && { deviceToken }),
+        ...(deviceType && { deviceType }),
       };
 
       if (user) await user.update(otpData);
       else user = await users.create({ countryCode, phone, role: "User", ...otpData });
+
+      const token = issueToken(user, loginTime);
 
       // await helper.sendSms(`${countryCode}${phone}`, `Your Break verification code is ${otp}`);
 
@@ -148,6 +154,8 @@ module.exports = {
         phone,
         expiresIn: OTP_TTL_SECONDS,
         resendIn: RESEND_AFTER_SECONDS,
+        token,
+        ...buildAuthResponse(user, token),
       });
     } catch (err) {
       console.log(err);

@@ -45,6 +45,7 @@ module.exports = {
     }
   },
 
+
   updateSettings: async (req, res) => {
     try {
       const { commissionPercent } = req.body;
