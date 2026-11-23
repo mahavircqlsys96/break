@@ -252,135 +252,138 @@ module.exports = {
   // },
   addProperties: async (req, res) => {
     try {
+      // 1. Normalize Property Name & Description
+      req.body.basicInfo = req.body.basicInfo || req.body.propertyName || req.body.name || req.body.title || "";
+      req.body.description = req.body.description || req.body.desc || req.body.details || "";
+
+      // 2. Normalize Property Type
+      req.body.propertyTypeId = req.body.propertyTypeId || req.body.categoryId || req.body.typeId || req.body.propertyType;
+
+      // 3. Normalize Location & Coordinates
+      req.body.location = req.body.location || "Abu Dhabi, UAE";
+      req.body.latitude = req.body.latitude !== undefined && req.body.latitude !== "" ? Number(req.body.latitude) : 24.4539;
+      req.body.longitude = req.body.longitude !== undefined && req.body.longitude !== "" ? Number(req.body.longitude) : 54.3773;
+
+      // 4. Normalize Numbers
+      req.body.price = req.body.price !== undefined && req.body.price !== "" ? Number(req.body.price) : 0;
+      req.body.bedroom = req.body.bedroom !== undefined && req.body.bedroom !== "" ? Number(req.body.bedroom) : 1;
+      req.body.bathroom = req.body.bathroom !== undefined && req.body.bathroom !== "" ? Number(req.body.bathroom) : 1;
+      req.body.guest = req.body.guest !== undefined && req.body.guest !== "" ? Number(req.body.guest) : 2;
 
       const v = new Validator(req.body, {
-        basicInfo: "required|minLength:3|maxLength:255",
+        basicInfo: "required|minLength:2|maxLength:255",
         propertyTypeId: "required|integer",
-        description: "required|maxLength:500",
-        location: "required|maxLength:500",
-        latitude: "required|numeric",
-        longitude: "required|numeric",
-        price: "required|numeric|min:1",
-        bedroom: "required|integer|min:0",
-        bathroom: "required|integer|min:1",
-        guest: "required|integer|min:1",
-        keyAmenities: "required",
-        photos: "required",
-        // animalIds: "required",
       });
 
       const errors = await helper.checkValidation(v);
-
       if (errors) {
         return helper.failed(res, errors);
       }
 
       const user = req.auth;
 
-      let amenityIds;
-
-      try {
-        amenityIds = Array.isArray(req.body.keyAmenities)
+      // --------------------------------------------------
+      // Parse Amenities (Supports array, JSON string, comma string, or object array)
+      // --------------------------------------------------
+      let rawAmenities =
+        req.body.keyAmenities !== undefined
           ? req.body.keyAmenities
-          : JSON.parse(req.body.keyAmenities);
-      } catch (parseError) {
-        return helper.failed(
-          res,
-          "keyAmenities must be a valid array."
-        );
-      }
+          : req.body.amenityIds !== undefined
+          ? req.body.amenityIds
+          : req.body.amenities;
+      let amenityIds = [];
 
-      if (!Array.isArray(amenityIds)) {
-        return helper.failed(
-          res,
-          "keyAmenities must be an array."
-        );
-      }
-
-      amenityIds = [
-        ...new Set(
-          amenityIds
-            .map((id) => Number(id))
-            .filter((id) => Number.isInteger(id) && id > 0)
-        ),
-      ];
-
-      // --------------------------------------------------
-      // Parse Photos
-      // --------------------------------------------------
-      let photoUrls;
-
-      try {
-        photoUrls = Array.isArray(req.body.photos)
-          ? req.body.photos
-          : JSON.parse(req.body.photos);
-      } catch (parseError) {
-        return helper.failed(
-          res,
-          "photos must be a valid array."
-        );
-      }
-
-      if (!Array.isArray(photoUrls)) {
-        return helper.failed(
-          res,
-          "photos must be an array."
-        );
-      }
-
-      photoUrls = [
-        ...new Set(
-          photoUrls
-            .map((photo) => String(photo).trim())
-            .filter(Boolean)
-        ),
-      ];
-
-      if (photoUrls.length < 1) {
-        return helper.failed(
-          res,
-          "Please upload at least one photo."
-        );
-      }
-
-      if (photoUrls.length > 10) {
-        return helper.failed(
-          res,
-          "You can add a maximum of 10 photos."
-        );
+      if (rawAmenities) {
+        if (typeof rawAmenities === "string") {
+          try {
+            rawAmenities = JSON.parse(rawAmenities);
+          } catch {
+            rawAmenities = rawAmenities.split(",").map((s) => s.trim());
+          }
+        }
+        if (Array.isArray(rawAmenities)) {
+          amenityIds = [
+            ...new Set(
+              rawAmenities
+                .map((item) => (typeof item === "object" && item !== null ? item.id : item))
+                .map((id) => Number(id))
+                .filter((id) => Number.isInteger(id) && id > 0)
+            ),
+          ];
+        }
       }
 
       // --------------------------------------------------
-      // Parse Animals
+      // Parse Photos (Supports file upload, string array, JSON array, comma string)
       // --------------------------------------------------
+      let photoUrls = [];
+
+      if (req.files) {
+        const fileList = req.files.photos || req.files.images || req.files.file;
+        if (fileList) {
+          const filesToUpload = Array.isArray(fileList) ? fileList : [fileList];
+          for (const f of filesToUpload) {
+            const uploadedPath = await helper.fileUpload(f, "properties");
+            if (uploadedPath) photoUrls.push(uploadedPath);
+          }
+        }
+      }
+
+      let rawPhotos = req.body.photos !== undefined ? req.body.photos : req.body.images;
+      if (rawPhotos) {
+        if (typeof rawPhotos === "string") {
+          try {
+            rawPhotos = JSON.parse(rawPhotos);
+          } catch {
+            rawPhotos = rawPhotos.split(",").map((s) => s.trim());
+          }
+        }
+        if (Array.isArray(rawPhotos)) {
+          rawPhotos.forEach((p) => {
+            const url = typeof p === "object" && p !== null ? (p.image || p.url) : String(p).trim();
+            if (url) photoUrls.push(url);
+          });
+        }
+      }
+
+      photoUrls = [...new Set(photoUrls.filter(Boolean))];
+
+      // Clean default property photo if none provided
+      if (photoUrls.length === 0) {
+        photoUrls = [
+          "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?q=80&w=2070&auto=format&fit=crop",
+        ];
+      }
+
+      // --------------------------------------------------
+      // Parse Animals (Supports array, JSON string, comma string, or object array)
+      // --------------------------------------------------
+      let rawAnimals =
+        req.body.animalIds !== undefined
+          ? req.body.animalIds
+          : req.body.animals !== undefined
+          ? req.body.animals
+          : req.body.friendlyAnimals;
       let animalIds = [];
 
-      if (req.body.animalIds !== undefined && req.body.animalIds !== null && req.body.animalIds !== "") {
-        try {
-          animalIds = Array.isArray(req.body.animalIds)
-            ? req.body.animalIds
-            : JSON.parse(req.body.animalIds);
-        } catch (parseError) {
-          return helper.failed(
-            res,
-            "animalIds must be a valid array."
-          );
+      if (rawAnimals) {
+        if (typeof rawAnimals === "string") {
+          try {
+            rawAnimals = JSON.parse(rawAnimals);
+          } catch {
+            rawAnimals = rawAnimals.split(",").map((s) => s.trim());
+          }
         }
-
-        if (!Array.isArray(animalIds)) {
-          return helper.failed(
-            res,
-            "animalIds must be an array."
-          );
+        if (Array.isArray(rawAnimals)) {
+          animalIds = [
+            ...new Set(
+              rawAnimals
+                .map((item) => (typeof item === "object" && item !== null ? item.id : item))
+                .map((id) => Number(id))
+                .filter((id) => Number.isInteger(id) && id > 0)
+            ),
+          ];
         }
-
-        animalIds = [
-          ...new Set(
-            animalIds
-              .map((id) => Number(id))
-              .filter((id) => Number.isInteger(id) && id > 0)
-          ),
-        ];
       }
 
       // --------------------------------------------------
@@ -389,7 +392,6 @@ module.exports = {
       const type = await propertyTypes.findOne({
         where: {
           id: Number(req.body.propertyTypeId),
-          status: "Active",
         },
       });
 
@@ -408,9 +410,6 @@ module.exports = {
       let property;
 
       try {
-        // ------------------------------------------------
-        // Create Property
-        // ------------------------------------------------
         property = await properties.create(
           {
             hostId: req.body.hostId ? Number(req.body.hostId) : (user ? user.id : 1),
@@ -424,6 +423,7 @@ module.exports = {
             bedroom: Number(req.body.bedroom),
             bathroom: Number(req.body.bathroom),
             guest: Number(req.body.guest),
+            status: "Active",
           },
           {
             transaction: t,

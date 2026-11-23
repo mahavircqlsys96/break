@@ -412,13 +412,35 @@ module.exports = {
   },
   getPropertyTypes: async (req, res) => {
     try {
-      const list = await propertyTypes.findAll({
+      let list = await propertyTypes.findAll({
         where: { status: "Active" },
         attributes: ["id", "title", "icon"],
         order: [["id", "ASC"]],
       });
 
-      return helper.success(res, "Property types fetched", list);
+      if (!list || list.length === 0) {
+        const defaults = [
+          { title: "Farms", icon: "Tractor", status: "Active" },
+          { title: "Vacation homes", icon: "Home", status: "Active" },
+          { title: "Resorts", icon: "Palmtree", status: "Active" },
+          { title: "Desert camps", icon: "Tent", status: "Active" },
+        ];
+        await propertyTypes.bulkCreate(defaults);
+        list = await propertyTypes.findAll({
+          where: { status: "Active" },
+          attributes: ["id", "title", "icon"],
+          order: [["id", "ASC"]],
+        });
+      }
+
+      const formatted = list.map((p) => ({
+        id: p.id,
+        title: p.title,
+        name: p.title,
+        icon: p.icon,
+      }));
+
+      return helper.success(res, "Property types fetched", formatted);
     } catch (err) {
       console.log(err);
       return helper.error(res, err);
@@ -429,15 +451,82 @@ module.exports = {
     try {
       const { type } = req.query;
       const whereClause = { status: "Active" };
-      if (type && type !== 'All') whereClause.type = type;
+      if (type && type !== "All") whereClause.type = type;
 
-      const list = await amenities.findAll({
+      let list = await amenities.findAll({
         where: whereClause,
         attributes: ["id", "title", "icon", "type"],
-        order: [["type", "ASC"], ["title", "ASC"]],
+        order: [["id", "ASC"]],
       });
 
-      return helper.success(res, "Amenities fetched successfully", list);
+      if ((!list || list.length === 0) && (!type || type === "All")) {
+        const defaults = [
+          // Essentials
+          { title: "Wi-Fi", icon: "Wifi", type: "Essentials", status: "Active" },
+          { title: "Air conditioning", icon: "Snowflake", type: "Essentials", status: "Active" },
+          { title: "Kitchen", icon: "CookingPot", type: "Essentials", status: "Active" },
+          { title: "Washer", icon: "WashingMachine", type: "Essentials", status: "Active" },
+          { title: "Dryer", icon: "WashingMachine", type: "Essentials", status: "Active" },
+          { title: "Smart TV", icon: "Tv", type: "Essentials", status: "Active" },
+          { title: "Iron and ironing board", icon: "Sparkles", type: "Essentials", status: "Active" },
+          { title: "Towels", icon: "Sparkles", type: "Essentials", status: "Active" },
+          { title: "Extra pillows and blankets", icon: "Home", type: "Essentials", status: "Active" },
+          { title: "Heating", icon: "Flame", type: "Essentials", status: "Active" },
+          { title: "Room-darkening curtains", icon: "Home", type: "Essentials", status: "Active" },
+          { title: "Clothes drying rack", icon: "Home", type: "Essentials", status: "Active" },
+          { title: "Ground-floor bedroom", icon: "Home", type: "Essentials", status: "Active" },
+          { title: "Maid's room", icon: "Home", type: "Essentials", status: "Active" },
+          { title: "Driver's room", icon: "Home", type: "Essentials", status: "Active" },
+          { title: "Dedicated workspace", icon: "Home", type: "Essentials", status: "Active" },
+          // Kitchen & dining
+          { title: "Microwave", icon: "CookingPot", type: "Kitchen & dining", status: "Active" },
+          { title: "Dishwasher", icon: "WashingMachine", type: "Kitchen & dining", status: "Active" },
+          { title: "Coffee maker", icon: "Coffee", type: "Kitchen & dining", status: "Active" },
+          { title: "Toaster", icon: "CookingPot", type: "Kitchen & dining", status: "Active" },
+          { title: "Dishes and cutlery", icon: "Utensils", type: "Kitchen & dining", status: "Active" },
+          { title: "Dining table", icon: "Utensils", type: "Kitchen & dining", status: "Active" },
+          { title: "Outdoor kitchen", icon: "Utensils", type: "Kitchen & dining", status: "Active" },
+          // Bathroom
+          { title: "Bathtub", icon: "Bath", type: "Bathroom", status: "Active" },
+          { title: "Toiletries (shampoo, soap)", icon: "Bath", type: "Bathroom", status: "Active" },
+          { title: "Slippers", icon: "Sparkles", type: "Bathroom", status: "Active" },
+          { title: "Outdoor shower", icon: "Waves", type: "Bathroom", status: "Active" },
+          // Entertainment
+          { title: "Projector / home cinema", icon: "Tv", type: "Entertainment", status: "Active" },
+          { title: "Outdoor cinema screen", icon: "Tv", type: "Entertainment", status: "Active" },
+          { title: "Games room", icon: "Gamepad2", type: "Entertainment", status: "Active" },
+          { title: "Sound system / speakers", icon: "Music", type: "Entertainment", status: "Active" },
+          { title: "Karaoke", icon: "Music", type: "Entertainment", status: "Active" },
+          { title: "Board games / Playstation", icon: "Gamepad2", type: "Entertainment", status: "Active" },
+          // Features & Outdoor
+          { title: "Swimming pool", icon: "Waves", type: "Features & Outdoor", status: "Active" },
+          { title: "BBQ grill & fire pit", icon: "Flame", type: "Features & Outdoor", status: "Active" },
+          { title: "Kids playground", icon: "Baby", type: "Features & Outdoor", status: "Active" },
+          { title: "Garden", icon: "Trees", type: "Features & Outdoor", status: "Active" },
+          { title: "Hot tub / Jacuzzi", icon: "Bath", type: "Features & Outdoor", status: "Active" },
+          // Safety
+          { title: "First aid kit", icon: "Cross", type: "Safety", status: "Active" },
+          { title: "Smoke alarm", icon: "ShieldAlert", type: "Safety", status: "Active" },
+          { title: "Fire extinguisher", icon: "Flame", type: "Safety", status: "Active" },
+          { title: "Security cameras", icon: "Cctv", type: "Safety", status: "Active" },
+        ];
+        await amenities.bulkCreate(defaults);
+        list = await amenities.findAll({
+          where: whereClause,
+          attributes: ["id", "title", "icon", "type"],
+          order: [["id", "ASC"]],
+        });
+      }
+
+      const formatted = list.map((a) => ({
+        id: a.id,
+        title: a.title,
+        name: a.title,
+        icon: a.icon,
+        type: a.type || "Essentials",
+      }));
+
+      return helper.success(res, "Amenities fetched successfully", formatted);
     } catch (err) {
       console.log(err);
       return helper.error(res, err);
@@ -446,13 +535,41 @@ module.exports = {
 
   getAnimals: async (req, res) => {
     try {
-      const list = await friendlyAnimals.findAll({
+      let list = await friendlyAnimals.findAll({
         where: { status: "Active" },
-        attributes: ["id", "title", "icon"],
-        order: [["title", "ASC"]],
+        order: [["id", "ASC"]],
       });
 
-      return helper.success(res, "Friendly animals fetched successfully", list);
+      if (!list || list.length === 0) {
+        const defaults = [
+          { title: "Horses", image: "https://images.unsplash.com/photo-1553284965-83fd3e82fa5a?w=150&auto=format&fit=crop&q=80", status: "Active" },
+          { title: "Goats", image: "https://images.unsplash.com/photo-1524024973431-2ad916746881?w=150&auto=format&fit=crop&q=80", status: "Active" },
+          { title: "Rabbits", image: "https://images.unsplash.com/photo-1585110396000-c9ffd4e4b308?w=150&auto=format&fit=crop&q=80", status: "Active" },
+          { title: "Chickens", image: "https://images.unsplash.com/photo-1548550023-2bdb3c5beed7?w=150&auto=format&fit=crop&q=80", status: "Active" },
+          { title: "Camels", image: "https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=150&auto=format&fit=crop&q=80", status: "Active" },
+          { title: "Sheep", image: "https://images.unsplash.com/photo-1484557052118-f32bd25b45b5?w=150&auto=format&fit=crop&q=80", status: "Active" },
+          { title: "Ducks", image: "https://images.unsplash.com/photo-1516467508483-a7212febe31a?w=150&auto=format&fit=crop&q=80", status: "Active" },
+          { title: "Pygmy Goats", image: "https://images.unsplash.com/photo-1524024973431-2ad916746881?w=150&auto=format&fit=crop&q=80", status: "Active" },
+          { title: "Dogs", image: "https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=150&auto=format&fit=crop&q=80", status: "Active" },
+          { title: "Cats", image: "https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=150&auto=format&fit=crop&q=80", status: "Active" },
+          { title: "Birds", image: "https://images.unsplash.com/photo-1452570053593-1b910e787d60?w=150&auto=format&fit=crop&q=80", status: "Active" },
+        ];
+        await friendlyAnimals.bulkCreate(defaults);
+        list = await friendlyAnimals.findAll({
+          where: { status: "Active" },
+          order: [["id", "ASC"]],
+        });
+      }
+
+      const formatted = list.map((a) => ({
+        id: a.id,
+        title: a.title,
+        name: a.title,
+        image: a.image || a.icon,
+        icon: a.image || a.icon,
+      }));
+
+      return helper.success(res, "Friendly animals fetched successfully", formatted);
     } catch (err) {
       console.log(err);
       return helper.error(res, err);

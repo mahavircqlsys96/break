@@ -19,6 +19,15 @@ module.exports = (io) => {
   router.get('/resetPasswordPage', authController.resetPasswordPage);
   router.post('/resetPassword', authController.resetPassword);
 
+  // Catalogs (Public & Authenticated access)
+  router.get('/getPropertyTypes', authController.getPropertyTypes);
+  router.get('/propertyTypes', authController.getPropertyTypes);
+  router.get('/getAmenities', authController.getAmenities);
+  router.get('/amenities', authController.getAmenities);
+  router.get('/getAnimals', authController.getAnimals);
+  router.get('/animals', authController.getAnimals);
+  router.get('/friendlyAnimals', authController.getAnimals);
+
   // ─── Header Auth ───
   router.use(authenticateHeader);
   router.post('/sendOtp', authController.sendOtp);
@@ -59,12 +68,15 @@ module.exports = (io) => {
   router.get('/host/support', hostController.getHostSupport);
 
   ///properites///
+  router.post('/addProperty', propertiesController.addProperties);
   router.post('/addProperties', propertiesController.addProperties);
+  router.put('/editProperty', propertiesController.editProperties);
   router.put('/editProperties', propertiesController.editProperties);
   router.get('/getProperties', propertiesController.getProperties);
-  router.get('/propertyDetail/:propertyId', propertiesController.propertyDetail)
-  router.get('/getPropertyReviews/:propertyId', propertiesController.getPropertyReviews)
-  router.delete('/deleteProperty/:propertyId', propertiesController.deleteProperty)
+  router.get('/properties', propertiesController.getProperties);
+  router.get('/propertyDetail/:propertyId', propertiesController.propertyDetail);
+  router.get('/getPropertyReviews/:propertyId', propertiesController.getPropertyReviews);
+  router.delete('/deleteProperty/:propertyId', propertiesController.deleteProperty);
 
 
   // Bookings
