@@ -1,0 +1,2061 @@
+{
+  "info": {
+    "name": "Break — App Screens APIs",
+    "description": "Complete Postman Collection for Break mobile application (Guest and Host flows) containing all endpoints, authentication headers, request bodies, and auto-token management.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "BaseUrl",
+      "value": "https://app.xviv.ae/api",
+      "type": "string"
+    },
+    {
+      "key": "secret_key",
+      "value": "U2FsdGVkX19LcIsdYQdhCGZ5aIyA2KnGY2LS/pjWyu0mG1DTW8jL7b/jcTzXH3Qp",
+      "type": "string"
+    },
+    {
+      "key": "publish_key",
+      "value": "U2FsdGVkX18JAl/oViKSywbrs1QOnUypo+5Xhl31kYw+ou+bv8MAMf/twoP/SK4O",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "01. Authentication & Onboarding",
+      "item": [
+        {
+          "name": "Send OTP (Login / Signup)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const json = pm.response.json();",
+                  "    if (json.body && json.body.token) {",
+                  "        pm.collectionVariables.set(\"token\", json.body.token);",
+                  "        console.log(\"Token saved:\", json.body.token);",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "secret_key",
+                "value": "{{secret_key}}",
+                "type": "text"
+              },
+              {
+                "key": "publish_key",
+                "value": "{{publish_key}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"countryCode\": \"+971\",\n  \"phone\": \"501234567\",\n  \"deviceToken\": \"fcm_dummy_token_123\",\n  \"deviceType\": \"Android\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{BaseUrl}}/sendOtp",
+              "host": [
+                "{{BaseUrl}}"
+              ],
+              "path": [
+                "sendOtp"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Verify OTP",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const json = pm.response.json();",
+                  "    if (json.body && json.body.token) {",
+                  "        pm.collectionVariables.set(\"token\", json.body.token);",
+                  "        console.log(\"Token saved:\", json.body.token);",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "secret_key",
+                "value": "{{secret_key}}",
+                "type": "text"
+              },
+              {
+                "key": "publish_key",
+                "value": "{{publish_key}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"countryCode\": \"+971\",\n  \"phone\": \"501234567\",\n  \"otp\": \"1234\",\n  \"deviceToken\": \"fcm_dummy_token_123\",\n  \"deviceType\": \"Android\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{BaseUrl}}/verifyOtp",
+              "host": [
+                "{{BaseUrl}}"
+              ],
+              "path": [
+                "verifyOtp"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Social Login (Google / Apple / UAEPass)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const json = pm.response.json();",
+                  "    if (json.body && json.body.token) {",
+                  "        pm.collectionVariables.set(\"token\", json.body.token);",
+                  "        console.log(\"Token saved:\", json.body.token);",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "secret_key",
+                "value": "{{secret_key}}",
+                "type": "text"
+              },
+              {
+                "key": "publish_key",
+                "value": "{{publish_key}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"socialType\": \"Google\",\n  \"socialId\": \"google_oauth_sub_10928374\",\n  \"email\": \"guest@example.com\",\n  \"name\": \"Abdulla Al Mansoori\",\n  \"deviceToken\": \"fcm_dummy_token_123\",\n  \"deviceType\": \"iOS\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{BaseUrl}}/socialLogin",
+              "host": [
+                "{{BaseUrl}}"
+              ],
+              "path": [
+                "socialLogin"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Guest Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const json = pm.response.json();",
+                  "    if (json.body && json.body.token) {",
+                  "        pm.collectionVariables.set(\"token\", json.body.token);",
+                  "        console.log(\"Token saved:\", json.body.token);",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "secret_key",
+                "value": "{{secret_key}}",
+                "type": "text"
+              },
+              {
+                "key": "publish_key",
+                "value": "{{publish_key}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"deviceId\": \"device_uuid_9921_apple\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{BaseUrl}}/guestLogin",
+              "host": [
+                "{{BaseUrl}}"
+              ],
+              "path": [
+                "guestLogin"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Complete Profile (Onboarding)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "secret_key",
+                "value": "{{secret_key}}",
+                "type": "text"
+              },
+              {
+                "key": "publish_key",
+                "value": "{{publish_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Abdulla Al Mansoori\",\n  \"gender\": \"Male\",\n  \"dob\": \"1995-06-15\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{BaseUrl}}/completeProfile",
+              "host": [
+                "{{BaseUrl}}"
+              ],
+              "path": [
+                "completeProfile"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Set Account Mode (User / Host)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "secret_key",
+                "value": "{{secret_key}}",
+                "type": "text"
+              },
+              {
+                "key": "publish_key",
+                "value": "{{publish_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"Host\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{BaseUrl}}/setAccountType",
+              "host": [
+                "{{BaseUrl}}"
+              ],
+              "path": [
+                "setAccountType"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "secret_key",
+                "value": "{{secret_key}}",
+                "type": "text"
+              },
+              {
+                "key": "publish_key",
+                "value": "{{publish_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{BaseUrl}}/logout",
+              "host": [
+                "{{BaseUrl}}"
+              ],
+              "path": [
+                "logout"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete Account",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "secret_key",
+                "value": "{{secret_key}}",
+                "type": "text"
+              },
+              {
+                "key": "publish_key",
+                "value": "{{publish_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{BaseUrl}}/accountDeleted",
+              "host": [
+                "{{BaseUrl}}"
+              ],
+              "path": [
+                "accountDeleted"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "02. Home & Discovery",
+      "item": [
+        {
+          "name": "Get Home Feed (Banners, Categories, Destinations, Featured)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "secret_key",
+                "value": "{{secret_key}}",
+                "type": "text"
+              },
+              {
+                "key": "publish_key",
+                "value": "{{publish_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{BaseUrl}}/home",
+              "host": [
+                "{{BaseUrl}}"
+              ],
+              "path": [
+                "home"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Property Types Catalog",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "secret_key",
+                "value": "{{secret_key}}",
+                "type": "text"
+              },
+              {
+                "key": "publish_key",
+                "value": "{{publish_key}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{BaseUrl}}/getPropertyTypes",
+              "host": [
+                "{{BaseUrl}}"
+              ],
+              "path": [
+                "getPropertyTypes"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Search & Filter Properties (Explore Screen)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "secret_key",
+                "value": "{{secret_key}}",
+                "type": "text"
+              },
+              {
+                "key": "publish_key",
+                "value": "{{publish_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{BaseUrl}}/getProperties?page=1&limit=10&propertyTypeId=1&destination=Al Wathba&minPrice=500&maxPrice=3000&guest=4",
+              "host": [
+                "{{BaseUrl}}"
+              ],
+              "path": [
+                "getProperties"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "propertyTypeId",
+                  "value": "1",
+                  "description": "1=Farms, 2=Vacation homes, 3=Resorts, 4=Desert camps"
+                },
+                {
+                  "key": "destination",
+                  "value": "Al Wathba"
+                },
+                {
+                  "key": "minPrice",
+                  "value": "500"
+                },
+                {
+                  "key": "maxPrice",
+                  "value": "3000"
+                },
+                {
+                  "key": "guest",
+                  "value": "4"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "03. Property Details & Catalogs",
+      "item": [
+        {
+          "name": "Get Property Detail (Stay Screen)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "secret_key",
+                "value": "{{secret_key}}",
+                "type": "text"
+              },
+              {
+                "key": "publish_key",
+                "value": "{{publish_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{BaseUrl}}/propertyDetail/1",
+              "host": [
+                "{{BaseUrl}}"
+              ],
+              "path": [
+                "propertyDetail",
+                "1"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Property Calendar Availability (Booked Dates)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "secret_key",
+                "value": "{{secret_key}}",
+                "type": "text"
+              },
+              {
+                "key": "publish_key",
+                "value": "{{publish_key}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{BaseUrl}}/propertyAvailability/1",
+              "host": [
+                "{{BaseUrl}}"
+              ],
+              "path": [
+                "propertyAvailability",
+                "1"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Property Reviews List",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "secret_key",
+                "value": "{{secret_key}}",
+                "type": "text"
+              },
+              {
+                "key": "publish_key",
+                "value": "{{publish_key}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{BaseUrl}}/getPropertyReviews/1?page=1&limit=10",
+              "host": [
+                "{{BaseUrl}}"
+              ],
+              "path": [
+                "getPropertyReviews",
+                "1"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Amenities Catalog",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "secret_key",
+                "value": "{{secret_key}}",
+                "type": "text"
+              },
+              {
+                "key": "publish_key",
+                "value": "{{publish_key}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{BaseUrl}}/getAmenities?type=All",
+              "host": [
+                "{{BaseUrl}}"
+              ],
+              "path": [
+                "getAmenities"
+              ],
+              "query": [
+                {
+                  "key": "type",
+                  "value": "All",
+                  "description": "All, Essentials, Kitchen & dining, Bathroom, Entertainment, Features & Outdoor, Safety"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Farm Animals Catalog",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "secret_key",
+                "value": "{{secret_key}}",
+                "type": "text"
+              },
+              {
+                "key": "publish_key",
+                "value": "{{publish_key}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{BaseUrl}}/getAnimals",
+              "host": [
+                "{{BaseUrl}}"
+              ],
+              "path": [
+                "getAnimals"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "04. Wishlists (Saved Properties)",
+      "item": [
+        {
+          "name": "Toggle Wishlist (Heart Button on Card)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "secret_key",
+                "value": "{{secret_key}}",
+                "type": "text"
+              },
+              {
+                "key": "publish_key",
+                "value": "{{publish_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"propertyId\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{BaseUrl}}/toggleWishlist",
+              "host": [
+                "{{BaseUrl}}"
+              ],
+              "path": [
+                "toggleWishlist"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Add to Wishlist (Named Folder)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "secret_key",
+                "value": "{{secret_key}}",
+                "type": "text"
+              },
+              {
+                "key": "publish_key",
+                "value": "{{publish_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"propertyId\": 1,\n  \"wishlistName\": \"Al Ain Weekend Trips\",\n  \"notes\": \"Great pool and horse stables\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{BaseUrl}}/addWishlist",
+              "host": [
+                "{{BaseUrl}}"
+              ],
+              "path": [
+                "addWishlist"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Saved Wishlists List",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "secret_key",
+                "value": "{{secret_key}}",
+                "type": "text"
+              },
+              {
+                "key": "publish_key",
+                "value": "{{publish_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{BaseUrl}}/getWishlist?page=1&limit=20",
+              "host": [
+                "{{BaseUrl}}"
+              ],
+              "path": [
+                "getWishlist"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Remove from Wishlist",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "secret_key",
+                "value": "{{secret_key}}",
+                "type": "text"
+              },
+              {
+                "key": "publish_key",
+                "value": "{{publish_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"propertyId\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{BaseUrl}}/removeWishlist",
+              "host": [
+                "{{BaseUrl}}"
+              ],
+              "path": [
+                "removeWishlist"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "05. Booking & Checkout Flow",
+      "item": [
+        {
+          "name": "Validate Promo Code / Coupon",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "secret_key",
+                "value": "{{secret_key}}",
+                "type": "text"
+              },
+              {
+                "key": "publish_key",
+                "value": "{{publish_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"promoCode\": \"BREAK2026\",\n  \"bookingAmount\": 2100\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{BaseUrl}}/validatePromo",
+              "host": [
+                "{{BaseUrl}}"
+              ],
+              "path": [
+                "validatePromo"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Booking (Checkout Reservation)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "secret_key",
+                "value": "{{secret_key}}",
+                "type": "text"
+              },
+              {
+                "key": "publish_key",
+                "value": "{{publish_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"propertyId\": 1,\n  \"checkIn\": \"2026-12-01\",\n  \"checkOut\": \"2026-12-04\",\n  \"adults\": 2,\n  \"children\": 1,\n  \"bringPet\": \"no\",\n  \"promoCode\": \"BREAK2026\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{BaseUrl}}/createBooking",
+              "host": [
+                "{{BaseUrl}}"
+              ],
+              "path": [
+                "createBooking"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Pay Booking (Confirm Payment)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "secret_key",
+                "value": "{{secret_key}}",
+                "type": "text"
+              },
+              {
+                "key": "publish_key",
+                "value": "{{publish_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bookingId\": 1,\n  \"paymentMethod\": \"card\",\n  \"transactionId\": \"ch_stripe_test_123456\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{BaseUrl}}/payBooking",
+              "host": [
+                "{{BaseUrl}}"
+              ],
+              "path": [
+                "payBooking"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get User Bookings (Guest Trips)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "secret_key",
+                "value": "{{secret_key}}",
+                "type": "text"
+              },
+              {
+                "key": "publish_key",
+                "value": "{{publish_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{BaseUrl}}/getUserBookings?type=upcoming",
+              "host": [
+                "{{BaseUrl}}"
+              ],
+              "path": [
+                "getUserBookings"
+              ],
+              "query": [
+                {
+                  "key": "type",
+                  "value": "upcoming",
+                  "description": "upcoming or past"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Booking Detail & Invoice Receipt",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "secret_key",
+                "value": "{{secret_key}}",
+                "type": "text"
+              },
+              {
+                "key": "publish_key",
+                "value": "{{publish_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{BaseUrl}}/getBookingDetail/1",
+              "host": [
+                "{{BaseUrl}}"
+              ],
+              "path": [
+                "getBookingDetail",
+                "1"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Cancel Booking",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "secret_key",
+                "value": "{{secret_key}}",
+                "type": "text"
+              },
+              {
+                "key": "publish_key",
+                "value": "{{publish_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bookingId\": 1,\n  \"reason\": \"Change of travel plans\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{BaseUrl}}/cancelBooking",
+              "host": [
+                "{{BaseUrl}}"
+              ],
+              "path": [
+                "cancelBooking"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "06. Reviews & Ratings",
+      "item": [
+        {
+          "name": "Submit Property Review & Rating",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "secret_key",
+                "value": "{{secret_key}}",
+                "type": "text"
+              },
+              {
+                "key": "publish_key",
+                "value": "{{publish_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"propertyId\": 1,\n  \"bookingId\": 1,\n  \"rating\": 5,\n  \"review\": \"Magnificent farm retreat! The pool was spotless and children loved feeding the horses.\",\n  \"cleanness\": 5,\n  \"accuracy\": 5,\n  \"checkIn\": 5,\n  \"communication\": 5,\n  \"location\": 5,\n  \"value\": 5\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{BaseUrl}}/giveRating",
+              "host": [
+                "{{BaseUrl}}"
+              ],
+              "path": [
+                "giveRating"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "07. Host — Property Listing Flow",
+      "item": [
+        {
+          "name": "Add Property (7-Step Listing Creation)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "secret_key",
+                "value": "{{secret_key}}",
+                "type": "text"
+              },
+              {
+                "key": "publish_key",
+                "value": "{{publish_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"propertyName\": \"Olive Grove Cottage\",\n  \"propertyTypeId\": 1,\n  \"description\": \"A peaceful farm oasis in Al Ain with private swimming pool, farm animals, shaded majlis and family barbecue area.\",\n  \"location\": \"Al Wathba, Abu Dhabi\",\n  \"latitude\": 24.2384,\n  \"longitude\": 54.7082,\n  \"price\": 1200,\n  \"bedroom\": 4,\n  \"bathroom\": 2,\n  \"guest\": 8,\n  \"amenityIds\": [\n    1,\n    2,\n    3,\n    4,\n    6,\n    17,\n    18,\n    24,\n    34,\n    35\n  ],\n  \"animalIds\": [\n    1,\n    2,\n    3,\n    4\n  ],\n  \"photos\": [\n    \"https://images.unsplash.com/photo-1512917774080-9991f1c4c750?q=80&w=2070&auto=format&fit=crop\",\n    \"https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=2070&auto=format&fit=crop\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{BaseUrl}}/addProperty",
+              "host": [
+                "{{BaseUrl}}"
+              ],
+              "path": [
+                "addProperty"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Edit Property",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "secret_key",
+                "value": "{{secret_key}}",
+                "type": "text"
+              },
+              {
+                "key": "publish_key",
+                "value": "{{publish_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"propertyId\": 1,\n  \"propertyName\": \"Olive Grove Cottage — Updated\",\n  \"price\": 1350,\n  \"bedroom\": 4,\n  \"bathroom\": 3,\n  \"guest\": 10\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{BaseUrl}}/editProperty",
+              "host": [
+                "{{BaseUrl}}"
+              ],
+              "path": [
+                "editProperty"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get My Host Listings",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "secret_key",
+                "value": "{{secret_key}}",
+                "type": "text"
+              },
+              {
+                "key": "publish_key",
+                "value": "{{publish_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{BaseUrl}}/getProperties?isMyListing=1",
+              "host": [
+                "{{BaseUrl}}"
+              ],
+              "path": [
+                "getProperties"
+              ],
+              "query": [
+                {
+                  "key": "isMyListing",
+                  "value": "1"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete Property",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "secret_key",
+                "value": "{{secret_key}}",
+                "type": "text"
+              },
+              {
+                "key": "publish_key",
+                "value": "{{publish_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{BaseUrl}}/deleteProperty/1",
+              "host": [
+                "{{BaseUrl}}"
+              ],
+              "path": [
+                "deleteProperty",
+                "1"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "08. Host — Onboarding & Operations",
+      "item": [
+        {
+          "name": "Host Dashboard (Home)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "secret_key",
+                "value": "{{secret_key}}",
+                "type": "text"
+              },
+              {
+                "key": "publish_key",
+                "value": "{{publish_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{BaseUrl}}/hostHome",
+              "host": [
+                "{{BaseUrl}}"
+              ],
+              "path": [
+                "hostHome"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Host Onboarding Progress",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "secret_key",
+                "value": "{{secret_key}}",
+                "type": "text"
+              },
+              {
+                "key": "publish_key",
+                "value": "{{publish_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{BaseUrl}}/host/onboardingProgress",
+              "host": [
+                "{{BaseUrl}}"
+              ],
+              "path": [
+                "host",
+                "onboardingProgress"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Submit Identity Verification (Emirates ID)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "secret_key",
+                "value": "{{secret_key}}",
+                "type": "text"
+              },
+              {
+                "key": "publish_key",
+                "value": "{{publish_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "idType",
+                  "value": "Emirates_ID",
+                  "type": "text"
+                },
+                {
+                  "key": "idNumber",
+                  "value": "784-1995-1234567-1",
+                  "type": "text"
+                },
+                {
+                  "key": "idExpiryDate",
+                  "value": "2028-12-31",
+                  "type": "text"
+                },
+                {
+                  "key": "idDocumentFront",
+                  "value": "",
+                  "type": "file"
+                },
+                {
+                  "key": "idDocumentBack",
+                  "value": "",
+                  "type": "file"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{BaseUrl}}/host/submitVerification",
+              "host": [
+                "{{BaseUrl}}"
+              ],
+              "path": [
+                "host",
+                "submitVerification"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Submit UAE Bank Payout Account",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "secret_key",
+                "value": "{{secret_key}}",
+                "type": "text"
+              },
+              {
+                "key": "publish_key",
+                "value": "{{publish_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bankName\": \"First Abu Dhabi Bank (FAB)\",\n  \"accountHolderName\": \"Abdulla Al Mansoori\",\n  \"iban\": \"AE070330000000001234567\",\n  \"accountNumber\": \"1234567890\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{BaseUrl}}/host/submitPayoutAccount",
+              "host": [
+                "{{BaseUrl}}"
+              ],
+              "path": [
+                "host",
+                "submitPayoutAccount"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Submit Holiday Home Permit (DET)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "secret_key",
+                "value": "{{secret_key}}",
+                "type": "text"
+              },
+              {
+                "key": "publish_key",
+                "value": "{{publish_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "propertyId",
+                  "value": "1",
+                  "type": "text"
+                },
+                {
+                  "key": "permitNumber",
+                  "value": "DET-2026-98124",
+                  "type": "text"
+                },
+                {
+                  "key": "permitDoc",
+                  "value": "",
+                  "type": "file"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{BaseUrl}}/host/submitHolidayHomePermit",
+              "host": [
+                "{{BaseUrl}}"
+              ],
+              "path": [
+                "host",
+                "submitHolidayHomePermit"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get UAE Banks List",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "secret_key",
+                "value": "{{secret_key}}",
+                "type": "text"
+              },
+              {
+                "key": "publish_key",
+                "value": "{{publish_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{BaseUrl}}/host/uaeBanks",
+              "host": [
+                "{{BaseUrl}}"
+              ],
+              "path": [
+                "host",
+                "uaeBanks"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Host Support Contacts",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "secret_key",
+                "value": "{{secret_key}}",
+                "type": "text"
+              },
+              {
+                "key": "publish_key",
+                "value": "{{publish_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{BaseUrl}}/host/support",
+              "host": [
+                "{{BaseUrl}}"
+              ],
+              "path": [
+                "host",
+                "support"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Host Reservations List",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "secret_key",
+                "value": "{{secret_key}}",
+                "type": "text"
+              },
+              {
+                "key": "publish_key",
+                "value": "{{publish_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{BaseUrl}}/getProviderBookings?page=1&limit=20",
+              "host": [
+                "{{BaseUrl}}"
+              ],
+              "path": [
+                "getProviderBookings"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Accept or Reject Reservation Request",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "secret_key",
+                "value": "{{secret_key}}",
+                "type": "text"
+              },
+              {
+                "key": "publish_key",
+                "value": "{{publish_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bookingId\": 1,\n  \"status\": \"Confirmed\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{BaseUrl}}/acceptRejectRequest",
+              "host": [
+                "{{BaseUrl}}"
+              ],
+              "path": [
+                "acceptRejectRequest"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "09. Profile, Notifications & Support",
+      "item": [
+        {
+          "name": "Get User Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "secret_key",
+                "value": "{{secret_key}}",
+                "type": "text"
+              },
+              {
+                "key": "publish_key",
+                "value": "{{publish_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{BaseUrl}}/getProfile",
+              "host": [
+                "{{BaseUrl}}"
+              ],
+              "path": [
+                "getProfile"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Edit Profile (Name, Phone, Image)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "secret_key",
+                "value": "{{secret_key}}",
+                "type": "text"
+              },
+              {
+                "key": "publish_key",
+                "value": "{{publish_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "name",
+                  "value": "Abdulla Al Mansoori",
+                  "type": "text"
+                },
+                {
+                  "key": "email",
+                  "value": "abdulla@break.ae",
+                  "type": "text"
+                },
+                {
+                  "key": "image",
+                  "value": "",
+                  "type": "file"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{BaseUrl}}/editProfile",
+              "host": [
+                "{{BaseUrl}}"
+              ],
+              "path": [
+                "editProfile"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Notifications List",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "secret_key",
+                "value": "{{secret_key}}",
+                "type": "text"
+              },
+              {
+                "key": "publish_key",
+                "value": "{{publish_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{BaseUrl}}/notificationList?page=1&limit=20",
+              "host": [
+                "{{BaseUrl}}"
+              ],
+              "path": [
+                "notificationList"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Clear All Notifications",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "secret_key",
+                "value": "{{secret_key}}",
+                "type": "text"
+              },
+              {
+                "key": "publish_key",
+                "value": "{{publish_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{BaseUrl}}/clearNotification",
+              "host": [
+                "{{BaseUrl}}"
+              ],
+              "path": [
+                "clearNotification"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Notification Toggle (On / Off)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "secret_key",
+                "value": "{{secret_key}}",
+                "type": "text"
+              },
+              {
+                "key": "publish_key",
+                "value": "{{publish_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"notificationStatus\": \"1\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{BaseUrl}}/notificationOnOff",
+              "host": [
+                "{{BaseUrl}}"
+              ],
+              "path": [
+                "notificationOnOff"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Contact Support",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "secret_key",
+                "value": "{{secret_key}}",
+                "type": "text"
+              },
+              {
+                "key": "publish_key",
+                "value": "{{publish_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"subject\": \"Assistance with Farm Permit\",\n  \"message\": \"Hello Break team, I need help uploading my holiday home permit.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{BaseUrl}}/contactUs",
+              "host": [
+                "{{BaseUrl}}"
+              ],
+              "path": [
+                "contactUs"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get FAQs (Help Center)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "secret_key",
+                "value": "{{secret_key}}",
+                "type": "text"
+              },
+              {
+                "key": "publish_key",
+                "value": "{{publish_key}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{BaseUrl}}/getFaqs",
+              "host": [
+                "{{BaseUrl}}"
+              ],
+              "path": [
+                "getFaqs"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get CMS Page (Terms / Privacy Policy / About)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "secret_key",
+                "value": "{{secret_key}}",
+                "type": "text"
+              },
+              {
+                "key": "publish_key",
+                "value": "{{publish_key}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{BaseUrl}}/getCms?type=terms_conditions",
+              "host": [
+                "{{BaseUrl}}"
+              ],
+              "path": [
+                "getCms"
+              ],
+              "query": [
+                {
+                  "key": "type",
+                  "value": "terms_conditions"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Report User or Property",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "secret_key",
+                "value": "{{secret_key}}",
+                "type": "text"
+              },
+              {
+                "key": "publish_key",
+                "value": "{{publish_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"propertyId\": 1,\n  \"reason\": \"Incorrect details\",\n  \"description\": \"The property description differs from photos.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{BaseUrl}}/reportUser",
+              "host": [
+                "{{BaseUrl}}"
+              ],
+              "path": [
+                "reportUser"
+              ]
+            }
+          }
+        },
+        {
+          "name": "File Upload (Generic Media)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "secret_key",
+                "value": "{{secret_key}}",
+                "type": "text"
+              },
+              {
+                "key": "publish_key",
+                "value": "{{publish_key}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "value": "",
+                  "type": "file"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{BaseUrl}}/fileUpload",
+              "host": [
+                "{{BaseUrl}}"
+              ],
+              "path": [
+                "fileUpload"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

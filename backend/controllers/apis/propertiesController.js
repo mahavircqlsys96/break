@@ -543,12 +543,65 @@ module.exports = {
 
       const offset = (page - 1) * limit;
 
+      // Search and Filter conditions
+      let whereClause = { deletedAt: null };
+
+      // 1. Host listings filter
+      if (req.query.isMyListing == 1 || req.query.myProperties == 1) {
+        if (req.auth && req.auth.id) {
+          whereClause.hostId = req.auth.id;
+        }
+      } else if (req.query.hostId) {
+        whereClause.hostId = req.query.hostId;
+      }
+
+      // 2. Keyword Search
+      const search = req.query.search || req.query.searchKey || req.query.q || req.query.keyword;
+      if (search && search.trim()) {
+        whereClause[Op.or] = [
+          { basicInfo: { [Op.like]: `%${search.trim()}%` } },
+          { location: { [Op.like]: `%${search.trim()}%` } },
+          { description: { [Op.like]: `%${search.trim()}%` } },
+        ];
+      }
+
+      // 3. Location / City
+      const city = req.query.city || req.query.destination || req.query.location;
+      if (city && city.trim() && !search) {
+        whereClause.location = { [Op.like]: `%${city.trim()}%` };
+      }
+
+      // 4. Property Type
+      const propertyTypeId = req.query.propertyTypeId || req.query.categoryId || req.query.typeId;
+      if (propertyTypeId) {
+        whereClause.propertyTypeId = Number(propertyTypeId);
+      }
+
+      // 5. Price Range
+      if (req.query.minPrice !== undefined && req.query.maxPrice !== undefined) {
+        whereClause.price = {
+          [Op.between]: [Number(req.query.minPrice), Number(req.query.maxPrice)],
+        };
+      } else if (req.query.minPrice !== undefined) {
+        whereClause.price = { [Op.gte]: Number(req.query.minPrice) };
+      } else if (req.query.maxPrice !== undefined) {
+        whereClause.price = { [Op.lte]: Number(req.query.maxPrice) };
+      }
+
+      // 6. Guest capacity, Bedrooms, Bathrooms
+      if (req.query.guest || req.query.guests) {
+        whereClause.guest = { [Op.gte]: Number(req.query.guest || req.query.guests) };
+      }
+      if (req.query.bedroom || req.query.bedrooms) {
+        whereClause.bedroom = { [Op.gte]: Number(req.query.bedroom || req.query.bedrooms) };
+      }
+      if (req.query.bathroom || req.query.bathrooms) {
+        whereClause.bathroom = { [Op.gte]: Number(req.query.bathroom || req.query.bathrooms) };
+      }
+
       const { count, rows: propertiesList } =
         await properties.findAndCountAll({
-          where: {
-            deletedAt: null,
-            // hostId: req.auth.id
-          },
+          where: whereClause,
 
           attributes: {
             include: [
